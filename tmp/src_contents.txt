@@ -1,0 +1,2771 @@
+
+# Directory: /home/vhost15998ssh/htdocs/digiplayer/src
+
+# Directory: /home/vhost15998ssh/htdocs/digiplayer/src/Services
+
+# Directory: /home/vhost15998ssh/htdocs/digiplayer/src/DTOs
+
+# Directory: /home/vhost15998ssh/htdocs/digiplayer/src/Jobs
+
+# Directory: /home/vhost15998ssh/htdocs/digiplayer/src/Models
+
+# Directory: /home/vhost15998ssh/htdocs/digiplayer/src/Cache
+
+# Directory: /home/vhost15998ssh/htdocs/digiplayer/src/Controllers
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/src/Services/LogService.php ===
+
+<?php
+namespace Services;
+
+class LogService {
+    private $logFile;
+    
+    public function __construct($type = 'general') {
+        $this->logFile = __DIR__ . "/../../logs/{$type}.log";
+        $this->ensureLogDirectory();
+    }
+    
+    private function ensureLogDirectory() {
+        $dir = dirname($this->logFile);
+        if (!file_exists($dir)) {
+            mkdir($dir, 0755, true);
+        }
+    }
+    
+    public function log($message, $level = 'INFO') {
+        $timestamp = date('Y-m-d H:i:s');
+        $formattedMessage = "[$timestamp] [$level] $message" . PHP_EOL;
+        file_put_contents($this->logFile, $formattedMessage, FILE_APPEND);
+    }
+    
+    public function error($message) {
+        $this->log($message, 'ERROR');
+    }
+    
+    public function info($message) {
+        $this->log($message, 'INFO');
+    }
+    
+    public function debug($message) {
+        $this->log($message, 'DEBUG');
+    }
+}
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/src/Controllers/AnalyticsController.php ===
+
+<?php
+namespace Controllers;
+
+class AnalyticsController extends BaseController {
+    public function getSystemOverview() {
+        try {
+            $this->checkPermission('read', 'analytics');
+
+            // Get devices statistics
+            $deviceStats = $this->db->query("
+                SELECT 
+                    COUNT(*) as total_devices,
+                    SUM(CASE WHEN status = 'online' THEN 1 ELSE 0 END) as online_devices,
+                    SUM(CASE WHEN status = 'offline' THEN 1 ELSE 0 END) as offline_devices,
+                    SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_devices
+                FROM devices
+            ")->fetch();
+
+            // Get content statistics
+            $contentStats = $this->db->query("
+                SELECT 
+                    COUNT(*) as total_content,
+                    SUM(CASE WHEN type = 'video' THEN 1 ELSE 0 END) as video_count,
+                    SUM(CASE WHEN type = 'image' THEN 1 ELSE 0 END) as image_count,
+                    SUM(size) as total_storage_used
+                FROM media
+            ")->fetch();
+
+            // Get playback statistics for last 24 hours
+            $playbackStats = $this->db->query("
+                SELECT 
+                    COUNT(*) as total_plays,
+                    COUNT(DISTINCT device_id) as unique_devices,
+                    SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END) as error_count
+                FROM playback_logs
+                WHERE start_time >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+            ")->fetch();
+
+            // Calculate error rate
+            $errorRate = $playbackStats['total_plays'] > 0 
+                ? ($playbackStats['error_count'] / $playbackStats['total_plays']) * 100 
+                : 0;
+
+            $this->response([
+                'device_stats' => $deviceStats,
+                'content_stats' => $contentStats,
+                'playback_stats' => $playbackStats,
+                'error_rate' => round($errorRate, 2)
+            ]);
+        } catch (\Exception $e) {
+            $this->errorResponse($e->getMessage(), $e->getCode());
+        }
+    }
+
+    public function getDeviceStats($deviceId, $startDate = null, $endDate = null) {
+        try {
+            $this->checkPermission('read', 'analytics');
+
+            if (!$startDate) $startDate = date('Y-m-d', strtotime('-7 days'));
+            if (!$endDate) $endDate = date('Y-m-d');
+
+            // Get device performance metrics
+            $sql = "
+                SELECT 
+                    DATE(created_at) as date,
+                    AVG(cpu_usage) as avg_cpu,
+                    AVG(memory_usage) as avg_memory,
+                    AVG(storage_usage) as avg_storage,
+                    AVG(network_speed) as avg_network
+                FROM device_stats
+                WHERE device_id = :device_id
+                AND DATE(created_at) BETWEEN :start_date AND :end_date
+                GROUP BY DATE(created_at)
+                ORDER BY date
+            ";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                'device_id' => $deviceId,
+                'start_date' => $startDate,
+                'end_date' => $endDate
+            ]);
+            $performanceMetrics = $stmt->fetchAll();
+
+            // Get playback statistics
+            $sql = "
+                SELECT 
+                    DATE(start_time) as date,
+                    COUNT(*) as total_plays,
+                    SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_plays,
+                    SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END) as error_plays,
+                    AVG(duration) as avg_duration
+                FROM playback_logs
+                WHERE device_id = :device_id
+                AND DATE(start_time) BETWEEN :start_date AND :end_date
+                GROUP BY DATE(start_time)
+                ORDER BY date
+            ";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                'device_id' => $deviceId,
+                'start_date' => $startDate,
+                'end_date' => $endDate
+            ]);
+            $playbackStats = $stmt->fetchAll();
+
+            // Get uptime statistics
+            $sql = "
+                SELECT 
+                    DATE(created_at) as date,
+                    SUM(CASE WHEN event_type = 'connect' THEN 1 ELSE 0 END) as connects,
+                    SUM(CASE WHEN event_type = 'disconnect' THEN 1 ELSE 0 END) as disconnects
+                FROM connectivity_logs
+                WHERE device_id = :device_id
+                AND DATE(created_at) BETWEEN :start_date AND :end_date
+                GROUP BY DATE(created_at)
+                ORDER BY date
+            ";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                'device_id' => $deviceId,
+                'start_date' => $startDate,
+                'end_date' => $endDate
+            ]);
+            $uptimeStats = $stmt->fetchAll();
+
+            $this->response([
+                'performance_metrics' => $performanceMetrics,
+                'playback_stats' => $playbackStats,
+                'uptime_stats' => $uptimeStats
+            ]);
+        } catch (\Exception $e) {
+            $this->errorResponse($e->getMessage(), $e->getCode());
+        }
+    }
+
+    public function getContentStats($period = '7d') {
+        try {
+            $this->checkPermission('read', 'analytics');
+
+            $startDate = $this->getPeriodStartDate($period);
+
+            // Get most played content
+            $sql = "
+                SELECT 
+                    m.id,
+                    m.name,
+                    m.type,
+                    COUNT(*) as play_count,
+                    COUNT(DISTINCT pl.device_id) as unique_devices,
+                    AVG(pl.duration) as avg_duration,
+                    SUM(CASE WHEN pl.status = 'error' THEN 1 ELSE 0 END) as error_count
+                FROM playback_logs pl
+                JOIN media m ON pl.media_id = m.id
+                WHERE pl.start_time >= :start_date
+                GROUP BY m.id, m.name, m.type
+                ORDER BY play_count DESC
+                LIMIT 10
+            ";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute(['start_date' => $startDate]);
+            $topContent = $stmt->fetchAll();
+
+            // Get content type distribution
+            $sql = "
+                SELECT 
+                    type,
+                    COUNT(*) as count,
+                    SUM(size) as total_size
+                FROM media
+                GROUP BY type
+            ";
+            
+            $typeDistribution = $this->db->query($sql)->fetchAll();
+
+            // Get daily playback trends
+            $sql = "
+                SELECT 
+                    DATE(start_time) as date,
+                    COUNT(*) as total_plays,
+                    COUNT(DISTINCT device_id) as unique_devices,
+                    SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END) as errors
+                FROM playback_logs
+                WHERE start_time >= :start_date
+                GROUP BY DATE(start_time)
+                ORDER BY date
+            ";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute(['start_date' => $startDate]);
+            $dailyTrends = $stmt->fetchAll();
+
+            $this->response([
+                'top_content' => $topContent,
+                'type_distribution' => $typeDistribution,
+                'daily_trends' => $dailyTrends
+            ]);
+        } catch (\Exception $e) {
+            $this->errorResponse($e->getMessage(), $e->getCode());
+        }
+    }
+
+    public function generateReport($params) {
+        try {
+            $this->checkPermission('read', 'analytics');
+
+            $startDate = $params['start_date'] ?? date('Y-m-d', strtotime('-30 days'));
+            $endDate = $params['end_date'] ?? date('Y-m-d');
+            $type = $params['type'] ?? 'system';
+
+            $report = [
+                'generated_at' => date('Y-m-d H:i:s'),
+                'period' => [
+                    'start' => $startDate,
+                    'end' => $endDate
+                ]
+            ];
+
+            switch ($type) {
+                case 'system':
+                    $report['data'] = $this->generateSystemReport($startDate, $endDate);
+                    break;
+                case 'device':
+                    if (!isset($params['device_id'])) {
+                        throw new \Exception("Device ID required for device report", 400);
+                    }
+                    $report['data'] = $this->generateDeviceReport(
+                        $params['device_id'], 
+                        $startDate, 
+                        $endDate
+                    );
+                    break;
+                case 'content':
+                    $report['data'] = $this->generateContentReport($startDate, $endDate);
+                    break;
+                default:
+                    throw new \Exception("Invalid report type", 400);
+            }
+
+            // Log report generation
+            $this->logActivity('generate_report', 'analytics', null, [
+                'type' => $type,
+                'period' => $report['period']
+            ]);
+
+            $this->response($report);
+        } catch (\Exception $e) {
+            $this->errorResponse($e->getMessage(), $e->getCode());
+        }
+    }
+
+    private function getPeriodStartDate($period) {
+        switch ($period) {
+            case '24h': return date('Y-m-d H:i:s', strtotime('-24 hours'));
+            case '7d': return date('Y-m-d', strtotime('-7 days'));
+            case '30d': return date('Y-m-d', strtotime('-30 days'));
+            case '90d': return date('Y-m-d', strtotime('-90 days'));
+            default: throw new \Exception("Invalid period", 400);
+        }
+    }
+
+    private function generateSystemReport($startDate, $endDate) {
+        // Implementation for system-wide report
+        // ...
+    }
+
+    private function generateDeviceReport($deviceId, $startDate, $endDate) {
+        // Implementation for device-specific report
+        // ...
+    }
+
+    private function generateContentReport($startDate, $endDate) {
+        // Implementation for content usage report
+        // ...
+    }
+}
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/src/Controllers/AuthController.php ===
+
+<?php
+namespace App\Controllers;
+
+class AuthController {
+    public function login($request, $response) {
+        $data = $request->getParsedBody();
+        // Login logic here
+        return $response->withJson(["status" => "success"]);
+    }
+}
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/src/Controllers/PlaylistController.php ===
+
+<?php
+namespace Controllers;
+
+class PlaylistController extends BaseController {
+    public function getAllPlaylists() {
+        try {
+            $this->checkPermission('read', 'playlists');
+            
+            $pagination = $this->getPaginationParams();
+
+            // Get total count
+            $stmt = $this->db->prepare("SELECT COUNT(*) as total FROM playlists");
+            $stmt->execute();
+            $total = $stmt->fetch()['total'];
+
+            // Get playlists with additional info
+            $sql = "
+                SELECT 
+                    p.*,
+                    u.name as created_by_name,
+                    COUNT(DISTINCT pm.media_id) as items_count,
+                    SUM(pm.duration) as total_duration
+                FROM playlists p
+                LEFT JOIN users u ON p.created_by = u.id
+                LEFT JOIN playlist_media pm ON p.id = pm.playlist_id
+                GROUP BY p.id
+                ORDER BY p.created_at DESC
+                LIMIT :offset, :limit
+            ";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                ':offset' => $pagination['offset'],
+                ':limit' => $pagination['limit']
+            ]);
+            
+            $playlists = $stmt->fetchAll();
+
+            $this->response([
+                'playlists' => $playlists,
+                'pagination' => [
+                    'page' => $pagination['page'],
+                    'limit' => $pagination['limit'],
+                    'total' => $total,
+                    'pages' => ceil($total / $pagination['limit'])
+                ]
+            ]);
+        } catch (\Exception $e) {
+            $this->errorResponse($e->getMessage(), $e->getCode());
+        }
+    }
+
+    public function getPlaylistItems($playlistId) {
+        try {
+            $this->checkPermission('read', 'playlists');
+
+            $sql = "
+                SELECT 
+                    m.*,
+                    pm.order_number,
+                    pm.duration,
+                    pm.transition_type
+                FROM playlist_media pm
+                JOIN media m ON pm.media_id = m.id
+                WHERE pm.playlist_id = ?
+                ORDER BY pm.order_number
+            ";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$playlistId]);
+            $items = $stmt->fetchAll();
+
+            $this->response(['items' => $items]);
+        } catch (\Exception $e) {
+            $this->errorResponse($e->getMessage(), $e->getCode());
+        }
+    }
+
+    public function createPlaylist($data) {
+        try {
+            $this->checkPermission('create', 'playlists');
+            
+            $data = $this->validateRequest(['name']);
+            $data = $this->sanitizeInput($data);
+
+            $this->db->beginTransaction();
+
+            // Insert playlist
+            $stmt = $this->db->prepare("
+                INSERT INTO playlists (
+                    name, description, status, schedule_type, created_by
+                ) VALUES (
+                    :name, :description, :status, :schedule_type, :created_by
+                )
+            ");
+
+            $stmt->execute([
+                'name' => $data['name'],
+                'description' => $data['description'] ?? null,
+                'status' => $data['status'] ?? 'active',
+                'schedule_type' => $data['schedule_type'] ?? 'always',
+                'created_by' => $this->user['id']
+            ]);
+
+            $playlistId = $this->db->lastInsertId();
+
+            // Add media items if provided
+            if (!empty($data['media_items'])) {
+                $this->addMediaToPlaylist($playlistId, $data['media_items']);
+            }
+
+            $this->db->commit();
+
+            // Log activity
+            $this->logActivity('create', 'playlist', $playlistId, $data);
+
+            $this->response([
+                'status' => 'success',
+                'id' => $playlistId,
+                'message' => 'Playlist created successfully'
+            ]);
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            $this->errorResponse($e->getMessage(), $e->getCode());
+        }
+    }
+
+    public function updatePlaylist($data) {
+        try {
+            $this->checkPermission('update', 'playlists');
+            
+            $data = $this->validateRequest(['id', 'name']);
+            $data = $this->sanitizeInput($data);
+
+            $this->db->beginTransaction();
+
+            // Update playlist
+            $stmt = $this->db->prepare("
+                UPDATE playlists SET
+                    name = :name,
+                    description = :description,
+                    status = :status,
+                    schedule_type = :schedule_type
+                WHERE id = :id
+            ");
+
+            $stmt->execute([
+                'id' => $data['id'],
+                'name' => $data['name'],
+                'description' => $data['description'] ?? null,
+                'status' => $data['status'] ?? 'active',
+                'schedule_type' => $data['schedule_type'] ?? 'always'
+            ]);
+
+            // Update media items if provided
+            if (isset($data['media_items'])) {
+                // Clear existing items
+                $stmt = $this->db->prepare("DELETE FROM playlist_media WHERE playlist_id = ?");
+                $stmt->execute([$data['id']]);
+
+                // Add new items
+                if (!empty($data['media_items'])) {
+                    $this->addMediaToPlaylist($data['id'], $data['media_items']);
+                }
+            }
+
+            $this->db->commit();
+
+            // Log activity
+            $this->logActivity('update', 'playlist', $data['id'], $data);
+
+            $this->response([
+                'status' => 'success',
+                'message' => 'Playlist updated successfully'
+            ]);
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            $this->errorResponse($e->getMessage(), $e->getCode());
+        }
+    }
+
+    private function addMediaToPlaylist($playlistId, $mediaItems) {
+        $stmt = $this->db->prepare("
+            INSERT INTO playlist_media (
+                playlist_id, media_id, order_number, duration, transition_type
+            ) VALUES (
+                ?, ?, ?, ?, ?
+            )
+        ");
+
+        foreach ($mediaItems as $index => $item) {
+            $stmt->execute([
+                $playlistId,
+                $item['media_id'],
+                $index + 1,
+                $item['duration'] ?? null,
+                $item['transition_type'] ?? 'none'
+            ]);
+        }
+    }
+
+    public function duplicatePlaylist($playlistId) {
+        try {
+            $this->checkPermission('create', 'playlists');
+
+            $this->db->beginTransaction();
+
+            // Get original playlist
+            $stmt = $this->db->prepare("SELECT * FROM playlists WHERE id = ?");
+            $stmt->execute([$playlistId]);
+            $originalPlaylist = $stmt->fetch();
+
+            if (!$originalPlaylist) {
+                throw new \Exception("Playlist not found", 404);
+            }
+
+            // Create new playlist
+            $stmt = $this->db->prepare("
+                INSERT INTO playlists (
+                    name, description, status, schedule_type, created_by
+                ) VALUES (
+                    :name, :description, :status, :schedule_type, :created_by
+                )
+            ");
+
+            $stmt->execute([
+                'name' => $originalPlaylist['name'] . ' (Copy)',
+                'description' => $originalPlaylist['description'],
+                'status' => 'inactive',
+                'schedule_type' => $originalPlaylist['schedule_type'],
+                'created_by' => $this->user['id']
+            ]);
+
+            $newPlaylistId = $this->db->lastInsertId();
+
+            // Copy media items
+            $stmt = $this->db->prepare("
+                INSERT INTO playlist_media (
+                    playlist_id, media_id, order_number, duration, transition_type
+                )
+                SELECT 
+                    ?, media_id, order_number, duration, transition_type
+                FROM playlist_media
+                WHERE playlist_id = ?
+                ORDER BY order_number
+            ");
+
+            $stmt->execute([$newPlaylistId, $playlistId]);
+
+            $this->db->commit();
+
+            // Log activity
+            $this->logActivity('duplicate', 'playlist', $newPlaylistId, [
+                'original_id' => $playlistId
+            ]);
+
+            $this->response([
+                'status' => 'success',
+                'id' => $newPlaylistId,
+                'message' => 'Playlist duplicated successfully'
+            ]);
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            $this->errorResponse($e->getMessage(), $e->getCode());
+        }
+    }
+
+    public function deletePlaylist($id) {
+        try {
+            $this->checkPermission('delete', 'playlists');
+
+            $this->db->beginTransaction();
+
+            // Delete playlist
+            $stmt = $this->db->prepare("DELETE FROM playlists WHERE id = ?");
+            $stmt->execute([$id]);
+
+            $this->db->commit();
+
+            // Log activity
+            $this->logActivity('delete', 'playlist', $id);
+
+            $this->response([
+                'status' => 'success',
+                'message' => 'Playlist deleted successfully'
+            ]);
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            $this->errorResponse($e->getMessage(), $e->getCode());
+        }
+    }
+}
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/src/Controllers/MonitoringController.php ===
+
+<?php
+namespace Controllers;
+
+class MonitoringController extends BaseController {
+    public function getSystemStatus() {
+        try {
+            // Get device status summary
+            $deviceStats = $this->db->query("
+                SELECT 
+                    COUNT(*) as total_devices,
+                    SUM(CASE WHEN status = 'online' THEN 1 ELSE 0 END) as online_devices,
+                    SUM(CASE WHEN status = 'offline' THEN 1 ELSE 0 END) as offline_devices,
+                    SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END) as error_devices
+                FROM devices
+            ")->fetch();
+
+            // Get content stats
+            $contentStats = $this->db->query("
+                SELECT 
+                    COUNT(*) as total_media,
+                    SUM(CASE WHEN type = 'video' THEN 1 ELSE 0 END) as video_count,
+                    SUM(CASE WHEN type = 'image' THEN 1 ELSE 0 END) as image_count
+                FROM media
+            ")->fetch();
+
+            // Get active playlists
+            $playlistStats = $this->db->query("
+                SELECT COUNT(*) as active_playlists 
+                FROM playlists 
+                WHERE status = 'active'
+            ")->fetch();
+
+            $this->jsonResponse([
+                'devices' => $deviceStats,
+                'content' => $contentStats,
+                'playlists' => $playlistStats
+            ]);
+        } catch (\Exception $e) {
+            $this->errorResponse("Failed to fetch system status");
+        }
+    }
+
+    public function getDeviceStats($deviceId) {
+        try {
+            $stmt = $this->db->prepare("
+                SELECT ds.*, 
+                       d.name as device_name,
+                       d.status,
+                       p.name as current_playlist,
+                       m.name as current_media
+                FROM device_stats ds
+                JOIN devices d ON ds.device_id = d.id
+                LEFT JOIN playlists p ON d.current_playlist_id = p.id
+                LEFT JOIN media m ON d.current_media_id = m.id
+                WHERE ds.device_id = :device_id
+                ORDER BY ds.created_at DESC
+                LIMIT 100
+            ");
+            
+            $stmt->execute(['device_id' => $deviceId]);
+            $this->jsonResponse(['stats' => $stmt->fetchAll()]);
+        } catch (\Exception $e) {
+            $this->errorResponse("Failed to fetch device stats");
+        }
+    }
+
+    public function updateDeviceStats() {
+        $data = $this->validateRequest(['device_id']);
+        try {
+            $stmt = $this->db->prepare("
+                INSERT INTO device_stats 
+                (device_id, cpu_usage, memory_usage, storage_usage, temperature, 
+                 network_speed, error_count, uptime)
+                VALUES 
+                (:device_id, :cpu_usage, :memory_usage, :storage_usage, :temperature,
+                 :network_speed, :error_count, :uptime)
+            ");
+            
+            $stmt->execute([
+                'device_id' => $data['device_id'],
+                'cpu_usage' => $data['cpu_usage'] ?? null,
+                'memory_usage' => $data['memory_usage'] ?? null,
+                'storage_usage' => $data['storage_usage'] ?? null,
+                'temperature' => $data['temperature'] ?? null,
+                'network_speed' => $data['network_speed'] ?? null,
+                'error_count' => $data['error_count'] ?? 0,
+                'uptime' => $data['uptime'] ?? null
+            ]);
+            
+            $this->jsonResponse(['status' => 'success']);
+        } catch (\Exception $e) {
+            $this->errorResponse("Failed to update device stats");
+        }
+    }
+
+    public function getAlerts() {
+        try {
+            $stmt = $this->db->query("
+                SELECT a.*, 
+                       d.name as device_name,
+                       u.name as acknowledged_by_name
+                FROM alerts a
+                JOIN devices d ON a.device_id = d.id
+                LEFT JOIN users u ON a.acknowledged_by = u.id
+                WHERE a.resolved_at IS NULL
+                ORDER BY a.severity DESC, a.created_at DESC
+            ");
+            
+            $this->jsonResponse(['alerts' => $stmt->fetchAll()]);
+        } catch (\Exception $e) {
+            $this->errorResponse("Failed to fetch alerts");
+        }
+    }
+
+    public function createAlert() {
+        $data = $this->validateRequest(['device_id', 'type', 'message']);
+        try {
+            $stmt = $this->db->prepare("
+                INSERT INTO alerts 
+                (device_id, type, message, severity, data)
+                VALUES 
+                (:device_id, :type, :message, :severity, :data)
+            ");
+            
+            $stmt->execute([
+                'device_id' => $data['device_id'],
+                'type' => $data['type'],
+                'message' => $data['message'],
+                'severity' => $data['severity'] ?? 'warning',
+                'data' => json_encode($data['data'] ?? [])
+            ]);
+            
+            $this->jsonResponse(['status' => 'success']);
+        } catch (\Exception $e) {
+            $this->errorResponse("Failed to create alert");
+        }
+    }
+
+    public function acknowledgeAlert($alertId) {
+        try {
+            $stmt = $this->db->prepare("
+                UPDATE alerts 
+                SET acknowledged_at = CURRENT_TIMESTAMP,
+                    acknowledged_by = :user_id 
+                WHERE id = :alert_id
+            ");
+            
+            $stmt->execute([
+                'alert_id' => $alertId,
+                'user_id' => $_SESSION['user']['id']
+            ]);
+            
+            $this->jsonResponse(['status' => 'success']);
+        } catch (\Exception $e) {
+            $this->errorResponse("Failed to acknowledge alert");
+        }
+    }
+}
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/src/Controllers/ScheduleController.php ===
+
+<?php
+namespace Controllers;
+
+class ScheduleController extends BaseController {
+    public function getAllSchedules() {
+        try {
+            $this->checkPermission('read', 'schedules');
+            
+            $dateRange = $this->getDateRangeParams();
+            $pagination = $this->getPaginationParams();
+
+            // Get total count
+            $stmt = $this->db->prepare("
+                SELECT COUNT(*) as total 
+                FROM schedules 
+                WHERE (DATE(start_time) BETWEEN :start_date AND :end_date)
+                OR days_of_week != ''
+            ");
+            
+            $stmt->execute([
+                ':start_date' => $dateRange['start_date'],
+                ':end_date' => $dateRange['end_date']
+            ]);
+            $total = $stmt->fetch()['total'];
+
+            // Get schedules with related data
+            $sql = "
+                SELECT 
+                    s.*,
+                    d.name as device_name,
+                    p.name as playlist_name,
+                    g.name as group_name
+                FROM schedules s
+                LEFT JOIN devices d ON s.device_id = d.id
+                LEFT JOIN playlists p ON s.playlist_id = p.id
+                LEFT JOIN groups g ON s.group_id = g.id
+                WHERE (DATE(s.start_time) BETWEEN :start_date AND :end_date)
+                OR s.days_of_week != ''
+                ORDER BY s.priority DESC, s.start_time ASC
+                LIMIT :offset, :limit
+            ";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                ':start_date' => $dateRange['start_date'],
+                ':end_date' => $dateRange['end_date'],
+                ':offset' => $pagination['offset'],
+                ':limit' => $pagination['limit']
+            ]);
+            
+            $schedules = $stmt->fetchAll();
+
+            $this->response([
+                'schedules' => $schedules,
+                'pagination' => [
+                    'page' => $pagination['page'],
+                    'limit' => $pagination['limit'],
+                    'total' => $total,
+                    'pages' => ceil($total / $pagination['limit'])
+                ]
+            ]);
+        } catch (\Exception $e) {
+            $this->errorResponse($e->getMessage(), $e->getCode());
+        }
+    }
+
+    public function getActiveSchedules($deviceId = null) {
+        try {
+            $this->checkPermission('read', 'schedules');
+
+            $now = new \DateTime();
+            $currentTime = $now->format('H:i:s');
+            $currentDay = strtolower($now->format('l'));
+
+            $params = [
+                ':current_time' => $currentTime,
+                ':current_day' => "%$currentDay%"
+            ];
+
+            $deviceCondition = "";
+            if ($deviceId) {
+                $deviceCondition = "AND s.device_id = :device_id";
+                $params[':device_id'] = $deviceId;
+            }
+
+            $sql = "
+                SELECT 
+                    s.*,
+                    d.name as device_name,
+                    p.name as playlist_name
+                FROM schedules s
+                JOIN devices d ON s.device_id = d.id
+                JOIN playlists p ON s.playlist_id = p.id
+                WHERE (
+                    (s.start_time <= :current_time AND s.end_time >= :current_time)
+                    AND (
+                        s.days_of_week = '*' 
+                        OR s.days_of_week LIKE :current_day
+                    )
+                    OR (
+                        s.is_exception = 1 
+                        AND s.exception_date = CURRENT_DATE
+                    )
+                )
+                $deviceCondition
+                ORDER BY s.priority DESC
+            ";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            $schedules = $stmt->fetchAll();
+
+            $this->response(['schedules' => $schedules]);
+        } catch (\Exception $e) {
+            $this->errorResponse($e->getMessage(), $e->getCode());
+        }
+    }
+
+    public function createSchedule($data) {
+        try {
+            $this->checkPermission('create', 'schedules');
+            
+            $data = $this->validateRequest([
+                'device_id', 'playlist_id', 'start_time', 'end_time'
+            ]);
+            $data = $this->sanitizeInput($data);
+
+            // Validate time format and device/playlist existence
+            $this->validateScheduleData($data);
+
+            $this->db->beginTransaction();
+
+            $stmt = $this->db->prepare("
+                INSERT INTO schedules (
+                    device_id, playlist_id, start_time, end_time,
+                    days_of_week, priority, is_exception, exception_date,
+                    timezone
+                ) VALUES (
+                    :device_id, :playlist_id, :start_time, :end_time,
+                    :days_of_week, :priority, :is_exception, :exception_date,
+                    :timezone
+                )
+            ");
+
+            $stmt->execute([
+                'device_id' => $data['device_id'],
+                'playlist_id' => $data['playlist_id'],
+                'start_time' => $data['start_time'],
+                'end_time' => $data['end_time'],
+                'days_of_week' => $data['days_of_week'] ?? '*',
+                'priority' => $data['priority'] ?? 1,
+                'is_exception' => $data['is_exception'] ?? false,
+                'exception_date' => $data['exception_date'] ?? null,
+                'timezone' => $data['timezone'] ?? 'UTC'
+            ]);
+
+            $scheduleId = $this->db->lastInsertId();
+
+            $this->db->commit();
+
+            // Log activity
+            $this->logActivity('create', 'schedule', $scheduleId, $data);
+
+            $this->response([
+                'status' => 'success',
+                'id' => $scheduleId,
+                'message' => 'Schedule created successfully'
+            ]);
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            $this->errorResponse($e->getMessage(), $e->getCode());
+        }
+    }
+
+    private function validateScheduleData($data) {
+        // Check if device exists
+        $stmt = $this->db->prepare("SELECT id FROM devices WHERE id = ?");
+        $stmt->execute([$data['device_id']]);
+        if (!$stmt->fetch()) {
+            throw new \Exception("Device not found", 404);
+        }
+
+        // Check if playlist exists
+        $stmt = $this->db->prepare("SELECT id FROM playlists WHERE id = ?");
+        $stmt->execute([$data['playlist_id']]);
+        if (!$stmt->fetch()) {
+            throw new \Exception("Playlist not found", 404);
+        }
+
+        // Validate time format
+        if (!strtotime($data['start_time']) || !strtotime($data['end_time'])) {
+            throw new \Exception("Invalid time format", 400);
+        }
+
+        // Check for schedule conflicts
+        $stmt = $this->db->prepare("
+            SELECT COUNT(*) as conflict_count
+            FROM schedules
+            WHERE device_id = :device_id
+            AND (
+                (start_time <= :end_time AND end_time >= :start_time)
+                OR (start_time <= :end_time AND end_time >= :start_time)
+            )
+            AND (
+                days_of_week = '*'
+                OR days_of_week LIKE :days_of_week
+            )
+            AND id != :schedule_id
+        ");
+
+        $stmt->execute([
+            'device_id' => $data['device_id'],
+            'start_time' => $data['start_time'],
+            'end_time' => $data['end_time'],
+            'days_of_week' => $data['days_of_week'] ?? '*',
+            'schedule_id' => $data['id'] ?? 0
+        ]);
+
+        if ($stmt->fetch()['conflict_count'] > 0) {
+            throw new \Exception("Schedule conflict detected", 409);
+        }
+    }
+
+    public function updateSchedule($data) {
+        try {
+            $this->checkPermission('update', 'schedules');
+            
+            $data = $this->validateRequest(['id']);
+            $data = $this->sanitizeInput($data);
+
+            // Validate schedule exists
+            $stmt = $this->db->prepare("SELECT id FROM schedules WHERE id = ?");
+            $stmt->execute([$data['id']]);
+            if (!$stmt->fetch()) {
+                throw new \Exception("Schedule not found", 404);
+            }
+
+            // Validate update data
+            if (isset($data['start_time']) && isset($data['end_time'])) {
+                $this->validateScheduleData($data);
+            }
+
+            $this->db->beginTransaction();
+
+            $updateFields = [];
+            $params = ['id' => $data['id']];
+
+            // Build dynamic update query
+            foreach ([
+                'device_id', 'playlist_id', 'start_time', 'end_time',
+                'days_of_week', 'priority', 'is_exception', 'exception_date',
+                'timezone'
+            ] as $field) {
+                if (isset($data[$field])) {
+                    $updateFields[] = "$field = :$field";
+                    $params[$field] = $data[$field];
+                }
+            }
+
+            if (!empty($updateFields)) {
+                $sql = "UPDATE schedules SET " . implode(', ', $updateFields) . 
+                       " WHERE id = :id";
+                $stmt = $this->db->prepare($sql);
+                $stmt->execute($params);
+            }
+
+            $this->db->commit();
+
+            // Log activity
+            $this->logActivity('update', 'schedule', $data['id'], $data);
+
+            $this->response([
+                'status' => 'success',
+                'message' => 'Schedule updated successfully'
+            ]);
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            $this->errorResponse($e->getMessage(), $e->getCode());
+        }
+    }
+
+    public function deleteSchedule($id) {
+        try {
+            $this->checkPermission('delete', 'schedules');
+
+            $this->db->beginTransaction();
+
+            $stmt = $this->db->prepare("DELETE FROM schedules WHERE id = ?");
+            $stmt->execute([$id]);
+
+            $this->db->commit();
+
+            // Log activity
+            $this->logActivity('delete', 'schedule', $id);
+
+            $this->response([
+                'status' => 'success',
+                'message' => 'Schedule deleted successfully'
+            ]);
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            $this->errorResponse($e->getMessage(), $e->getCode());
+        }
+    }
+}
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/src/Controllers/ContentDistributionController.php ===
+
+<?php
+namespace Controllers;
+
+class ContentDistributionController extends BaseController {
+    public function queueContentDistribution() {
+        $data = $this->validateRequest(['device_ids', 'content_type']);
+        try {
+            $this->db->beginTransaction();
+            
+            // Get relevant content based on type
+            $content = $this->getContentForDistribution($data['content_type'], $data);
+            
+            // Create distribution tasks for each device
+            $stmt = $this->db->prepare("
+                INSERT INTO distribution_queue 
+                (device_id, content_type, content_id, priority, status)
+                VALUES (:device_id, :content_type, :content_id, :priority, 'pending')
+            ");
+            
+            foreach ($data['device_ids'] as $deviceId) {
+                foreach ($content as $item) {
+                    $stmt->execute([
+                        'device_id' => $deviceId,
+                        'content_type' => $data['content_type'],
+                        'content_id' => $item['id'],
+                        'priority' => $data['priority'] ?? 1
+                    ]);
+                }
+            }
+            
+            $this->db->commit();
+            $this->jsonResponse(['status' => 'success']);
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            $this->errorResponse("Failed to queue content distribution");
+        }
+    }
+
+    private function getContentForDistribution($type, $data) {
+        switch ($type) {
+            case 'playlist':
+                return $this->getPlaylistContent($data['playlist_id']);
+            case 'media':
+                return $this->getMediaContent($data['media_ids']);
+            case 'update':
+                return $this->getSystemUpdate($data['version']);
+            default:
+                throw new \Exception("Invalid content type");
+        }
+    }
+
+    private function getPlaylistContent($playlistId) {
+        $stmt = $this->db->prepare("
+            SELECT m.*, pm.order_number 
+            FROM playlist_media pm
+            JOIN media m ON pm.media_id = m.id
+            WHERE pm.playlist_id = ?
+            ORDER BY pm.order_number
+        ");
+        $stmt->execute([$playlistId]);
+        return $stmt->fetchAll();
+    }
+
+    public function getDistributionStatus($deviceId) {
+        try {
+            $stmt = $this->db->prepare("
+                SELECT dq.*, 
+                       m.name as content_name,
+                       m.file_path,
+                       m.size
+                FROM distribution_queue dq
+                LEFT JOIN media m ON dq.content_id = m.id
+                WHERE dq.device_id = :device_id
+                AND dq.status != 'completed'
+                ORDER BY dq.priority DESC, dq.created_at ASC
+            ");
+            
+            $stmt->execute(['device_id' => $deviceId]);
+            $this->jsonResponse(['queue' => $stmt->fetchAll()]);
+        } catch (\Exception $e) {
+            $this->errorResponse("Failed to get distribution status");
+        }
+    }
+
+    public function updateDistributionStatus() {
+        $data = $this->validateRequest(['queue_id', 'status']);
+        try {
+            $stmt = $this->db->prepare("
+                UPDATE distribution_queue 
+                SET status = :status,
+                    progress = :progress,
+                    error_message = :error_message,
+                    completed_at = CASE 
+                        WHEN :status IN ('completed', 'failed') THEN CURRENT_TIMESTAMP 
+                        ELSE NULL 
+                    END
+                WHERE id = :queue_id
+            ");
+            
+            $stmt->execute([
+                'queue_id' => $data['queue_id'],
+                'status' => $data['status'],
+                'progress' => $data['progress'] ?? null,
+                'error_message' => $data['error_message'] ?? null
+            ]);
+            
+            $this->jsonResponse(['status' => 'success']);
+        } catch (\Exception $e) {
+            $this->errorResponse("Failed to update distribution status");
+        }
+    }
+
+    public function validateContentDistribution() {
+        $data = $this->validateRequest(['device_id', 'content_checksums']);
+        try {
+            $missingContent = [];
+            foreach ($data['content_checksums'] as $contentId => $checksum) {
+                $stmt = $this->db->prepare("
+                    SELECT checksum FROM media WHERE id = ?
+                ");
+                $stmt->execute([$contentId]);
+                $result = $stmt->fetch();
+                
+                if (!$result || $result['checksum'] !== $checksum) {
+                    $missingContent[] = $contentId;
+                }
+            }
+            
+            $this->jsonResponse([
+                'status' => 'success',
+                'missing_content' => $missingContent
+            ]);
+        } catch (\Exception $e) {
+            $this->errorResponse("Failed to validate content");
+        }
+    }
+
+    public function getContentChunked($contentId, $chunkSize = 1048576) {
+        try {
+            $stmt = $this->db->prepare("
+                SELECT file_path, size FROM media WHERE id = ?
+            ");
+            $stmt->execute([$contentId]);
+            $content = $stmt->fetch();
+            
+            if (!$content) {
+                $this->errorResponse("Content not found", 404);
+            }
+            
+            $filePath = $_SERVER['DOCUMENT_ROOT'] . $content['file_path'];
+            if (!file_exists($filePath)) {
+                $this->errorResponse("Content file not found", 404);
+            }
+            
+            $start = isset($_GET['start']) ? intval($_GET['start']) : 0;
+            $end = min($start + $chunkSize, $content['size']);
+            
+            $fp = fopen($filePath, 'rb');
+            fseek($fp, $start);
+            $data = fread($fp, $end - $start);
+            fclose($fp);
+            
+            header('Content-Type: application/octet-stream');
+            header('Content-Length: ' . ($end - $start));
+            header('Content-Range: bytes ' . $start . '-' . ($end - 1) . '/' . $content['size']);
+            echo $data;
+            exit;
+        } catch (\Exception $e) {
+            $this->errorResponse("Failed to get content chunk");
+        }
+    }
+}
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/src/Controllers/ReportingController.php ===
+
+<?php
+namespace Controllers;
+
+class ReportingController extends BaseController {
+    public function generateDeviceReport($deviceId, $startDate = null, $endDate = null) {
+        try {
+            // Validate dates or set defaults
+            $startDate = $startDate ?? date('Y-m-d', strtotime('-30 days'));
+            $endDate = $endDate ?? date('Y-m-d');
+
+            $stmt = $this->db->prepare("
+                SELECT 
+                    d.name as device_name,
+                    d.ip_address,
+                    COUNT(DISTINCT pl.playlist_id) as total_playlists,
+                    COUNT(DISTINCT pl.media_id) as total_media,
+                    SUM(CASE WHEN pl.action = 'play' THEN 1 ELSE 0 END) as total_plays,
+                    SUM(CASE WHEN pl.action = 'error' THEN 1 ELSE 0 END) as total_errors,
+                    ROUND(AVG(ds.cpu_usage), 2) as avg_cpu,
+                    ROUND(AVG(ds.memory_usage), 2) as avg_memory,
+                    COUNT(DISTINCT DATE(pl.timestamp)) as active_days,
+                    MAX(pl.timestamp) as last_activity
+                FROM devices d
+                LEFT JOIN playback_logs pl ON d.id = pl.device_id
+                LEFT JOIN device_stats ds ON d.id = ds.device_id
+                WHERE d.id = :device_id
+                AND DATE(pl.timestamp) BETWEEN :start_date AND :end_date
+                GROUP BY d.id, d.name, d.ip_address
+            ");
+
+            $stmt->execute([
+                'device_id' => $deviceId,
+                'start_date' => $startDate,
+                'end_date' => $endDate
+            ]);
+            
+            $deviceStats = $stmt->fetch();
+
+            // Get daily playback data
+            $stmt = $this->db->prepare("
+                SELECT 
+                    DATE(timestamp) as date,
+                    COUNT(*) as play_count,
+                    COUNT(DISTINCT media_id) as unique_media,
+                    SUM(duration) as total_duration
+                FROM playback_logs
+                WHERE device_id = :device_id
+                AND DATE(timestamp) BETWEEN :start_date AND :end_date
+                GROUP BY DATE(timestamp)
+                ORDER BY date
+            ");
+
+            $stmt->execute([
+                'device_id' => $deviceId,
+                'start_date' => $startDate,
+                'end_date' => $endDate
+            ]);
+            
+            $dailyStats = $stmt->fetchAll();
+
+            $this->jsonResponse([
+                'device_summary' => $deviceStats,
+                'daily_stats' => $dailyStats,
+                'period' => [
+                    'start' => $startDate,
+                    'end' => $endDate
+                ]
+            ]);
+        } catch (\Exception $e) {
+            $this->errorResponse("Failed to generate device report");
+        }
+    }
+
+    public function generatePlaylistReport($playlistId, $startDate = null, $endDate = null) {
+        try {
+            $startDate = $startDate ?? date('Y-m-d', strtotime('-30 days'));
+            $endDate = $endDate ?? date('Y-m-d');
+
+            // Get playlist overview
+            $stmt = $this->db->prepare("
+                SELECT 
+                    p.name as playlist_name,
+                    COUNT(DISTINCT pl.device_id) as total_devices,
+                    COUNT(DISTINCT pl.media_id) as total_media,
+                    SUM(CASE WHEN pl.action = 'play' THEN 1 ELSE 0 END) as total_plays,
+                    SUM(pl.duration) as total_duration,
+                    COUNT(DISTINCT DATE(pl.timestamp)) as active_days
+                FROM playlists p
+                LEFT JOIN playback_logs pl ON p.id = pl.playlist_id
+                WHERE p.id = :playlist_id
+                AND DATE(pl.timestamp) BETWEEN :start_date AND :end_date
+                GROUP BY p.id, p.name
+            ");
+
+            $stmt->execute([
+                'playlist_id' => $playlistId,
+                'start_date' => $startDate,
+                'end_date' => $endDate
+            ]);
+            
+            $playlistStats = $stmt->fetch();
+
+            // Get media performance within playlist
+            $stmt = $this->db->prepare("
+                SELECT 
+                    m.name as media_name,
+                    COUNT(*) as play_count,
+                    SUM(pl.duration) as total_duration,
+                    COUNT(CASE WHEN pl.action = 'error' THEN 1 ELSE 0 END) as error_count,
+                    COUNT(DISTINCT pl.device_id) as unique_devices
+                FROM playback_logs pl
+                JOIN media m ON pl.media_id = m.id
+                WHERE pl.playlist_id = :playlist_id
+                AND DATE(pl.timestamp) BETWEEN :start_date AND :end_date
+                GROUP BY pl.media_id, m.name
+                ORDER BY play_count DESC
+            ");
+
+            $stmt->execute([
+                'playlist_id' => $playlistId,
+                'start_date' => $startDate,
+                'end_date' => $endDate
+            ]);
+            
+            $mediaStats = $stmt->fetchAll();
+
+            $this->jsonResponse([
+                'playlist_summary' => $playlistStats,
+                'media_stats' => $mediaStats,
+                'period' => [
+                    'start' => $startDate,
+                    'end' => $endDate
+                ]
+            ]);
+        } catch (\Exception $e) {
+            $this->errorResponse("Failed to generate playlist report");
+        }
+    }
+
+    public function generateSystemReport($startDate = null, $endDate = null) {
+        try {
+            $startDate = $startDate ?? date('Y-m-d', strtotime('-30 days'));
+            $endDate = $endDate ?? date('Y-m-d');
+
+            // System overview
+            $systemStats = $this->db->query("
+                SELECT 
+                    COUNT(DISTINCT d.id) as total_devices,
+                    COUNT(DISTINCT pl.playlist_id) as active_playlists,
+                    COUNT(DISTINCT pl.media_id) as active_media,
+                    SUM(CASE WHEN pl.action = 'play' THEN 1 ELSE 0 END) as total_plays,
+                    SUM(CASE WHEN pl.action = 'error' THEN 1 ELSE 0 END) as total_errors,
+                    ROUND(AVG(ds.cpu_usage), 2) as avg_system_cpu,
+                    ROUND(AVG(ds.memory_usage), 2) as avg_system_memory
+                FROM devices d
+                LEFT JOIN playback_logs pl ON d.id = pl.device_id
+                LEFT JOIN device_stats ds ON d.id = ds.device_id
+                WHERE DATE(pl.timestamp) BETWEEN '$startDate' AND '$endDate'
+            ")->fetch();
+
+            // Device performance ranking
+            $deviceRanking = $this->db->query("
+                SELECT 
+                    d.name as device_name,
+                    COUNT(*) as play_count,
+                    COUNT(DISTINCT pl.media_id) as unique_media,
+                    SUM(pl.duration) as total_duration,
+                    COUNT(CASE WHEN pl.action = 'error' THEN 1 ELSE 0 END) as error_count
+                FROM devices d
+                JOIN playback_logs pl ON d.id = pl.device_id
+                WHERE DATE(pl.timestamp) BETWEEN '$startDate' AND '$endDate'
+                GROUP BY d.id, d.name
+                ORDER BY play_count DESC
+            ")->fetchAll();
+
+            $this->jsonResponse([
+                'system_summary' => $systemStats,
+                'device_ranking' => $deviceRanking,
+                'period' => [
+                    'start' => $startDate,
+                    'end' => $endDate
+                ]
+            ]);
+        } catch (\Exception $e) {
+            $this->errorResponse("Failed to generate system report");
+        }
+    }
+
+    public function scheduleReport() {
+        $data = $this->validateRequest(['report_type', 'frequency', 'recipients']);
+        try {
+            $stmt = $this->db->prepare("
+                INSERT INTO scheduled_reports 
+                (type, frequency, recipients, parameters, next_run)
+                VALUES (:type, :frequency, :recipients, :parameters, :next_run)
+            ");
+            
+            $nextRun = $this->calculateNextRun($data['frequency']);
+            
+            $stmt->execute([
+                'type' => $data['report_type'],
+                'frequency' => $data['frequency'],
+                'recipients' => json_encode($data['recipients']),
+                'parameters' => json_encode($data['parameters'] ?? []),
+                'next_run' => $nextRun
+            ]);
+            
+            $this->jsonResponse([
+                'status' => 'success',
+                'next_run' => $nextRun
+            ]);
+        } catch (\Exception $e) {
+            $this->errorResponse("Failed to schedule report");
+        }
+    }
+
+    private function calculateNextRun($frequency) {
+        $now = new \DateTime();
+        switch($frequency) {
+            case 'daily':
+                return $now->modify('+1 day')->setTime(0, 0);
+            case 'weekly':
+                return $now->modify('next monday')->setTime(0, 0);
+            case 'monthly':
+                return $now->modify('first day of next month')->setTime(0, 0);
+            default:
+                throw new \Exception("Invalid frequency");
+        }
+    }
+}
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/src/Controllers/DeviceController.php.bak ===
+
+<?php
+namespace Controllers;
+
+class DeviceController extends BaseController {
+    public function getDevices() {
+        try {
+            $sql = "SELECT d.*, 
+                    GROUP_CONCAT(g.name) as group_names,
+                    p.name as playlist_name,
+                    ds.cpu_usage,
+                    ds.memory_usage,
+                    ds.last_heartbeat,
+                    dl.location_name
+                FROM devices d
+                LEFT JOIN device_groups dg ON d.id = dg.device_id
+                LEFT JOIN groups g ON dg.group_id = g.id
+                LEFT JOIN playlists p ON d.current_playlist_id = p.id
+                LEFT JOIN device_stats ds ON d.id = ds.device_id
+                LEFT JOIN device_locations dl ON d.id = dl.device_id
+                WHERE 1=1";
+
+            $params = [];
+
+            // Apply filters
+            if (isset($_GET['status'])) {
+                $sql .= " AND d.status = ?";
+                $params[] = $_GET['status'];
+            }
+            
+            if (isset($_GET['group'])) {
+                $sql .= " AND g.id = ?";
+                $params[] = $_GET['group'];
+            }
+
+            if (isset($_GET['location'])) {
+                $sql .= " AND dl.location_name LIKE ?";
+                $params[] = "%{$_GET['location']}%";
+            }
+
+            $sql .= " GROUP BY d.id ORDER BY d.name";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            
+            $this->jsonResponse(['devices' => $stmt->fetchAll()]);
+        } catch (\Exception $e) {
+            $this->errorResponse("Failed to fetch devices: " . $e->getMessage());
+        }
+    }
+
+    public function createDevice() {
+        try {
+            $data = json_decode(file_get_contents('php://input'), true);
+            
+            if (!isset($data['name']) || !isset($data['ip_address'])) {
+                throw new \Exception('Name and IP address are required');
+            }
+            
+            $this->db->beginTransaction();
+            
+            // Insert device
+            $stmt = $this->db->prepare("
+                INSERT INTO devices (name, ip_address, status, description)
+                VALUES (?, ?, 'pending', ?)
+            ");
+            $stmt->execute([$data['name'], $data['ip_address'], $data['description'] ?? null]);
+            
+            $deviceId = $this->db->lastInsertId();
+            
+            // Add to group if specified
+            if (!empty($data['group_id'])) {
+                $stmt = $this->db->prepare("
+                    INSERT INTO device_groups (device_id, group_id)
+                    VALUES (?, ?)
+                ");
+                $stmt->execute([$deviceId, $data['group_id']]);
+            }
+            
+            // Add location if specified
+            if (!empty($data['location'])) {
+                $stmt = $this->db->prepare("
+                    INSERT INTO device_locations (device_id, location_name)
+                    VALUES (?, ?)
+                ");
+                $stmt->execute([$deviceId, $data['location']]);
+            }
+            
+            $this->db->commit();
+            $this->jsonResponse(['status' => 'success', 'id' => $deviceId]);
+            
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            $this->errorResponse("Failed to create device: " . $e->getMessage());
+        }
+    }
+
+    public function updateDevice($id) {
+        try {
+            $data = json_decode(file_get_contents('php://input'), true);
+            
+            $this->db->beginTransaction();
+            
+            // Update device
+            $stmt = $this->db->prepare("
+                UPDATE devices 
+                SET name = ?,
+                    ip_address = ?,
+                    status = ?,
+                    description = ?
+                WHERE id = ?
+            ");
+            
+            $stmt->execute([
+                $data['name'],
+                $data['ip_address'],
+                $data['status'] ?? 'pending',
+                $data['description'] ?? null,
+                $id
+            ]);
+            
+            // Update group if specified
+            if (isset($data['group_id'])) {
+                $stmt = $this->db->prepare("DELETE FROM device_groups WHERE device_id = ?");
+                $stmt->execute([$id]);
+                
+                if ($data['group_id']) {
+                    $stmt = $this->db->prepare("INSERT INTO device_groups (device_id, group_id) VALUES (?, ?)");
+                    $stmt->execute([$id, $data['group_id']]);
+                }
+            }
+            
+            $this->db->commit();
+            $this->jsonResponse(['status' => 'success']);
+            
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            $this->errorResponse("Failed to update device: " . $e->getMessage());
+        }
+    }
+
+    public function deleteDevice($id) {
+        try {
+            $stmt = $this->db->prepare("DELETE FROM devices WHERE id = ?");
+            $stmt->execute([$id]);
+            $this->jsonResponse(['status' => 'success']);
+        } catch (\Exception $e) {
+            $this->errorResponse("Failed to delete device");
+        }
+    }
+
+    public function bulkAction() {
+        try {
+            $data = json_decode(file_get_contents('php://input'), true);
+            
+            if (!isset($data['devices']) || !isset($data['action'])) {
+                throw new \Exception('Devices and action are required');
+            }
+            
+            $this->db->beginTransaction();
+            
+            foreach ($data['devices'] as $deviceId) {
+                switch ($data['action']) {
+                    case 'restart':
+                        $this->queueDeviceCommand($deviceId, 'restart');
+                        break;
+                    case 'update':
+                        $this->queueDeviceCommand($deviceId, 'update');
+                        break;
+                    case 'change_group':
+                        if (!isset($data['group_id'])) break;
+                        $this->updateDeviceGroup($deviceId, $data['group_id']);
+                        break;
+                }
+            }
+            
+            $this->db->commit();
+            $this->jsonResponse(['status' => 'success']);
+            
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            $this->errorResponse("Failed to perform bulk action: " . $e->getMessage());
+        }
+    }
+
+    private function queueDeviceCommand($deviceId, $command) {
+        $stmt = $this->db->prepare("
+            INSERT INTO scheduled_commands (device_id, command, status)
+            VALUES (?, ?, 'pending')
+        ");
+        $stmt->execute([$deviceId, $command]);
+    }
+    
+    private function updateDeviceGroup($deviceId, $groupId) {
+        $stmt = $this->db->prepare("
+            INSERT INTO device_groups (device_id, group_id)
+            VALUES (?, ?)
+            ON DUPLICATE KEY UPDATE group_id = VALUES(group_id)
+        ");
+        $stmt->execute([$deviceId, $groupId]);
+    }
+}
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/src/Controllers/ContentController.php ===
+
+<?php
+namespace Controllers;
+
+class ContentController extends BaseController {
+    private $uploadDir = '/home/vhost15998ssh/htdocs/digiplayer/public/uploads/media/';
+    private $allowedTypes = [
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+        'image/gif' => 'gif',
+        'video/mp4' => 'mp4',
+        'video/webm' => 'webm'
+    ];
+    private $maxFileSize = 104857600; // 100MB
+
+    public function getAllMedia($params = []) {
+        try {
+            $this->checkPermission('read', 'media');
+
+            $pagination = $this->getPaginationParams();
+            $whereConditions = [];
+            $queryParams = [];
+
+            if (!empty($params['type'])) {
+                $whereConditions[] = "type = :type";
+                $queryParams[':type'] = $params['type'];
+            }
+
+            $whereClause = $whereConditions ? 'WHERE ' . implode(' AND ', $whereConditions) : '';
+
+            // Get total count
+            $countSql = "SELECT COUNT(*) as total FROM media $whereClause";
+            $stmt = $this->db->prepare($countSql);
+            $stmt->execute($queryParams);
+            $total = $stmt->fetch()['total'];
+
+            // Get media files
+            $sql = "
+                SELECT 
+                    m.*,
+                    u.name as uploaded_by_name
+                FROM media m
+                LEFT JOIN users u ON m.uploaded_by = u.id
+                $whereClause
+                ORDER BY m.created_at DESC
+                LIMIT :offset, :limit
+            ";
+
+            $queryParams[':offset'] = $pagination['offset'];
+            $queryParams[':limit'] = $pagination['limit'];
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($queryParams);
+            $media = $stmt->fetchAll();
+
+            $this->response([
+                'media' => $media,
+                'pagination' => [
+                    'page' => $pagination['page'],
+                    'limit' => $pagination['limit'],
+                    'total' => $total,
+                    'pages' => ceil($total / $pagination['limit'])
+                ]
+            ]);
+        } catch (\Exception $e) {
+            $this->errorResponse($e->getMessage(), $e->getCode());
+        }
+    }
+
+    public function uploadMedia($file, $data) {
+        try {
+            $this->checkPermission('create', 'media');
+
+            if (!isset($this->allowedTypes[$file['type']])) {
+                throw new \Exception("Invalid file type", 400);
+            }
+
+            if ($file['size'] > $this->maxFileSize) {
+                throw new \Exception("File too large", 400);
+            }
+
+            // Generate unique filename
+            $extension = $this->allowedTypes[$file['type']];
+            $filename = time() . '_' . uniqid() . '.' . $extension;
+            $targetPath = $this->uploadDir . $filename;
+
+            // Create upload directory if it doesn't exist
+            if (!file_exists($this->uploadDir)) {
+                mkdir($this->uploadDir, 0755, true);
+            }
+
+            // Move uploaded file
+            if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
+                throw new \Exception("Failed to save file", 500);
+            }
+
+            // Get file info
+            $fileInfo = $this->getFileInfo($targetPath, $file['type']);
+
+            $this->db->beginTransaction();
+
+            // Insert media record
+            $stmt = $this->db->prepare("
+                INSERT INTO media (
+                    name, type, file_path, size, duration, resolution,
+                    uploaded_by, checksum
+                ) VALUES (
+                    :name, :type, :file_path, :size, :duration, :resolution,
+                    :uploaded_by, :checksum
+                )
+            ");
+
+            $stmt->execute([
+                'name' => $data['name'] ?? pathinfo($file['name'], PATHINFO_FILENAME),
+                'type' => strpos($file['type'], 'video') !== false ? 'video' : 'image',
+                'file_path' => '/uploads/media/' . $filename,
+                'size' => $file['size'],
+                'duration' => $fileInfo['duration'] ?? null,
+                'resolution' => $fileInfo['resolution'] ?? null,
+                'uploaded_by' => $this->user['id'],
+                'checksum' => hash_file('sha256', $targetPath)
+            ]);
+
+            $mediaId = $this->db->lastInsertId();
+
+            // Store metadata if any
+            if (!empty($fileInfo['metadata'])) {
+                $stmt = $this->db->prepare("
+                    INSERT INTO media_metadata (media_id, metadata)
+                    VALUES (?, ?)
+                ");
+                $stmt->execute([$mediaId, json_encode($fileInfo['metadata'])]);
+            }
+
+            $this->db->commit();
+
+            // Log activity
+            $this->logActivity('upload', 'media', $mediaId);
+
+            $this->response([
+                'status' => 'success',
+                'id' => $mediaId,
+                'message' => 'File uploaded successfully'
+            ]);
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            // Clean up file if uploaded
+            if (isset($targetPath) && file_exists($targetPath)) {
+                unlink($targetPath);
+            }
+            $this->errorResponse($e->getMessage(), $e->getCode());
+        }
+    }
+
+    private function getFileInfo($path, $mimeType) {
+        $info = [
+            'resolution' => null,
+            'duration' => null,
+            'metadata' => []
+        ];
+
+        if (strpos($mimeType, 'image') !== false) {
+            $imageInfo = getimagesize($path);
+            if ($imageInfo) {
+                $info['resolution'] = $imageInfo[0] . 'x' . $imageInfo[1];
+                $info['metadata'] = [
+                    'width' => $imageInfo[0],
+                    'height' => $imageInfo[1],
+                    'bits' => $imageInfo['bits'] ?? null,
+                    'channels' => $imageInfo['channels'] ?? null
+                ];
+            }
+        } elseif (strpos($mimeType, 'video') !== false && extension_loaded('ffmpeg')) {
+            $ffmpeg = \FFMpeg\FFMpeg::create();
+            $video = $ffmpeg->open($path);
+            
+            // Get video duration
+            $duration = $video->getDuration();
+            $info['duration'] = $duration;
+
+            // Get video dimensions
+            $dimensions = $video->getStreams()->videos()->first()->getDimensions();
+            $info['resolution'] = $dimensions->getWidth() . 'x' . $dimensions->getHeight();
+            
+            $info['metadata'] = [
+                'width' => $dimensions->getWidth(),
+                'height' => $dimensions->getHeight(),
+                'duration' => $duration,
+                'format' => $video->getFormat()->all()
+            ];
+        }
+
+        return $info;
+    }
+
+    public function deleteMedia($id) {
+        try {
+            $this->checkPermission('delete', 'media');
+
+            // Get media info
+            $stmt = $this->db->prepare("SELECT file_path FROM media WHERE id = ?");
+            $stmt->execute([$id]);
+            $media = $stmt->fetch();
+
+            if (!$media) {
+                throw new \Exception("Media not found", 404);
+            }
+
+            $this->db->beginTransaction();
+
+            // Delete database record
+            $stmt = $this->db->prepare("DELETE FROM media WHERE id = ?");
+            $stmt->execute([$id]);
+
+            // Delete file
+            $filePath = $_SERVER['DOCUMENT_ROOT'] . $media['file_path'];
+            if (file_exists($filePath)) {
+                unlink($filePath);
+            }
+
+            $this->db->commit();
+
+            // Log activity
+            $this->logActivity('delete', 'media', $id);
+
+            $this->response([
+                'status' => 'success',
+                'message' => 'Media deleted successfully'
+            ]);
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            $this->errorResponse($e->getMessage(), $e->getCode());
+        }
+    }
+}
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/src/Controllers/DeviceController.php ===
+
+<?php
+namespace Controllers;
+
+class DeviceController extends BaseController {
+    public function getDevices() {
+    try {
+        $sql = "SELECT d.*, 
+                GROUP_CONCAT(DISTINCT g.name) as group_names,
+                p.name as playlist_name,
+                dl.location_name,
+                ds.last_heartbeat,
+                d.current_playlist_id
+            FROM devices d
+            LEFT JOIN device_group dg ON d.id = dg.device_id
+            LEFT JOIN groups g ON dg.group_id = g.id
+            LEFT JOIN playlists p ON d.current_playlist_id = p.id
+            LEFT JOIN device_locations dl ON d.id = dl.device_id
+            LEFT JOIN device_stats ds ON d.id = ds.device_id
+            WHERE 1=1";
+
+        $params = [];
+
+        if (!empty($_GET['search'])) {
+            $sql .= " AND (d.name LIKE ? OR d.ip_address LIKE ?)";
+            $searchTerm = "%{$_GET['search']}%";
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+        }
+
+        if (!empty($_GET['status'])) {
+            $sql .= " AND d.status = ?";
+            $params[] = $_GET['status'];
+        }
+
+        if (!empty($_GET['group_id'])) {
+            $sql .= " AND dg.group_id = ?";
+            $params[] = $_GET['group_id'];
+        }
+
+        $sql .= " GROUP BY d.id ORDER BY d.name";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        
+        $this->jsonResponse(['devices' => $stmt->fetchAll()]);
+    } catch (\Exception $e) {
+        $this->errorResponse("Failed to fetch devices: " . $e->getMessage());
+    }
+}
+
+    public function createDevice() {
+        try {
+            $data = json_decode(file_get_contents('php://input'), true);
+            
+            if (!isset($data['name']) || !isset($data['ip_address']) || !isset($data['location'])) {
+                throw new \Exception('Name, IP address and location are required');
+            }
+            
+            $this->db->beginTransaction();
+            
+            // Insert device
+            $stmt = $this->db->prepare("
+                INSERT INTO devices (
+                    name, ip_address, status, device_key
+                ) VALUES (
+                    ?, ?, 'pending', UUID()
+                )
+            ");
+            $stmt->execute([$data['name'], $data['ip_address']]);
+            
+            $deviceId = $this->db->lastInsertId();
+            
+            // Add location
+            $stmt = $this->db->prepare("
+                INSERT INTO device_locations (device_id, location_name)
+                VALUES (?, ?)
+            ");
+            $stmt->execute([$deviceId, $data['location']]);
+            
+            // Add to group if specified
+            if (!empty($data['group_id'])) {
+                $stmt = $this->db->prepare("
+                    INSERT INTO device_groups (device_id, group_id)
+                    VALUES (?, ?)
+                ");
+                $stmt->execute([$deviceId, $data['group_id']]);
+            }
+            
+            $this->db->commit();
+            $this->jsonResponse(['status' => 'success', 'id' => $deviceId]);
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            $this->errorResponse("Failed to create device: " . $e->getMessage());
+        }
+    }
+
+    public function deviceAction() {
+        try {
+            $data = json_decode(file_get_contents('php://input'), true);
+            
+            if (!isset($data['device_id']) || !isset($data['action'])) {
+                throw new \Exception('Device ID and action are required');
+            }
+            
+            switch($data['action']) {
+                case 'restart':
+                    $this->queueCommand($data['device_id'], 'restart');
+                    break;
+                case 'update':
+                    $this->queueCommand($data['device_id'], 'update');
+                    break;
+                case 'configure':
+                    // Handle device configuration
+                    break;
+                default:
+                    throw new \Exception('Invalid action');
+            }
+            
+            $this->jsonResponse(['status' => 'success']);
+        } catch (\Exception $e) {
+            $this->errorResponse("Failed to execute device action: " . $e->getMessage());
+        }
+    }
+
+    private function queueCommand($deviceId, $command) {
+        $stmt = $this->db->prepare("
+            INSERT INTO scheduled_commands (device_id, command, status)
+            VALUES (?, ?, 'pending')
+        ");
+        $stmt->execute([$deviceId, $command]);
+    }
+}
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/src/Controllers/BaseController.php ===
+
+<?php
+namespace Controllers;
+
+class BaseController {
+    protected $db;
+    protected $user;
+
+    public function __construct() {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        if (!isset($_SESSION['user'])) {
+            $this->jsonResponse(['error' => 'Unauthorized'], 401);
+            exit;
+        }
+        
+        $this->initDatabase();
+        $this->user = $_SESSION['user'];
+    }
+
+    protected function initDatabase() {
+        try {
+            $config = require __DIR__ . '/../../config/database.php';
+            
+            $this->db = new \PDO(
+                "mysql:host={$config['host']};dbname={$config['dbname']};charset={$config['charset']}",
+                $config['username'],
+                $config['password'],
+                $config['options']
+            );
+        } catch (\PDOException $e) {
+            $this->jsonResponse(['error' => "Database connection failed"], 500);
+            exit;
+        }
+    }
+
+    protected function jsonResponse($data, $code = 200) {
+        http_response_code($code);
+        header('Content-Type: application/json');
+        echo json_encode($data);
+        exit;
+    }
+
+    protected function errorResponse($message, $code = 400) {
+        $this->jsonResponse(['error' => $message], $code);
+    }
+
+    protected function validateRequest($required = []) {
+        $data = json_decode(file_get_contents('php://input'), true);
+        
+        foreach ($required as $field) {
+            if (!isset($data[$field])) {
+                $this->errorResponse("Missing required field: $field");
+            }
+        }
+        
+        return $data;
+    }
+}
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/src/Controllers/MediaController.php ===
+
+<?php
+namespace Controllers;
+
+class MediaController extends BaseController {
+    private $uploadDir = 'public/uploads/media/';
+    
+    public function getMedia() {
+        try {
+            $stmt = $this->db->query("SELECT * FROM media ORDER BY uploaded_date DESC");
+            $this->jsonResponse(['media' => $stmt->fetchAll()]);
+        } catch (\Exception $e) {
+            $this->errorResponse("Failed to fetch media");
+        }
+    }
+
+    public function uploadMedia() {
+        if (!isset($_FILES['file'])) {
+            $this->errorResponse("No file uploaded", 400);
+        }
+
+        $file = $_FILES['file'];
+        if (!$this->validateFile($file)) {
+            $this->errorResponse("Invalid file type", 400);
+        }
+
+        try {
+            $fileName = time() . '_' . basename($file['name']);
+            $targetPath = $this->uploadDir . $fileName;
+            
+            if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
+                throw new \Exception("Failed to move uploaded file");
+            }
+
+            $fileInfo = $this->getFileInfo($targetPath, $file['type']);
+            $stmt = $this->db->prepare(
+                "INSERT INTO media (name, type, file_path, resolution, size, duration) 
+                VALUES (:name, :type, :file_path, :resolution, :size, :duration)"
+            );
+            
+            $stmt->execute([
+                'name' => $_POST['name'] ?? pathinfo($file['name'], PATHINFO_FILENAME),
+                'type' => $fileInfo['type'],
+                'file_path' => '/digiplayer/public/uploads/media/' . $fileName,
+                'resolution' => $fileInfo['resolution'],
+                'size' => $file['size'],
+                'duration' => $fileInfo['duration'] ?? null
+            ]);
+
+            $this->jsonResponse([
+                'status' => 'success',
+                'id' => $this->db->lastInsertId()
+            ]);
+        } catch (\Exception $e) {
+            $this->errorResponse("Upload failed: " . $e->getMessage());
+        }
+    }
+
+    private function validateFile($file) {
+        $allowedTypes = [
+            'image/jpeg', 'image/png', 'image/gif',
+            'video/mp4', 'video/webm'
+        ];
+        return in_array($file['type'], $allowedTypes);
+    }
+
+    private function getFileInfo($path, $mimeType) {
+        $info = [
+            'type' => strpos($mimeType, 'video') !== false ? 'video' : 'image',
+            'resolution' => null,
+            'duration' => null
+        ];
+
+        if ($info['type'] === 'image') {
+            $imageInfo = getimagesize($path);
+            if ($imageInfo) {
+                $info['resolution'] = $imageInfo[0] . 'x' . $imageInfo[1];
+            }
+        }
+
+        return $info;
+    }
+
+    public function deleteMedia($id) {
+        try {
+            $stmt = $this->db->prepare("SELECT file_path FROM media WHERE id = ?");
+            $stmt->execute([$id]);
+            $media = $stmt->fetch();
+            
+            if ($media && file_exists($_SERVER['DOCUMENT_ROOT'] . $media['file_path'])) {
+                unlink($_SERVER['DOCUMENT_ROOT'] . $media['file_path']);
+            }
+
+            $stmt = $this->db->prepare("DELETE FROM media WHERE id = ?");
+            $stmt->execute([$id]);
+            
+            $this->jsonResponse(['status' => 'success']);
+        } catch (\Exception $e) {
+            $this->errorResponse("Failed to delete media");
+        }
+    }
+}
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/src/Controllers/CacheController.php ===
+
+<?php
+namespace Controllers;
+
+class CacheController extends BaseController {
+    private $cacheDir = 'cache/';
+    private $maxCacheSize = 10737418240; // 10GB in bytes
+    
+    public function __construct() {
+        parent::__construct();
+        $this->ensureCacheDirectory();
+    }
+
+    private function ensureCacheDirectory() {
+        if (!file_exists($this->cacheDir)) {
+            mkdir($this->cacheDir, 0755, true);
+        }
+    }
+
+    public function getCacheStatus($deviceId = null) {
+        try {
+            if ($deviceId) {
+                $stmt = $this->db->prepare("
+                    SELECT 
+                        c.*,
+                        m.name as content_name,
+                        m.type as content_type
+                    FROM cache_entries c
+                    JOIN media m ON c.content_id = m.id
+                    WHERE c.device_id = :device_id
+                    ORDER BY c.last_accessed DESC
+                ");
+                $stmt->execute(['device_id' => $deviceId]);
+                $cacheEntries = $stmt->fetchAll();
+
+                $totalSize = array_sum(array_column($cacheEntries, 'size'));
+                $cacheUsage = [
+                    'total_entries' => count($cacheEntries),
+                    'total_size' => $totalSize,
+                    'entries' => $cacheEntries
+                ];
+            } else {
+                // System-wide cache status
+                $stmt = $this->db->query("
+                    SELECT 
+                        COUNT(*) as total_entries,
+                        SUM(size) as total_size,
+                        COUNT(DISTINCT device_id) as devices_count
+                    FROM cache_entries
+                ");
+                $cacheUsage = $stmt->fetch();
+            }
+
+            $this->jsonResponse(['cache_status' => $cacheUsage]);
+        } catch (\Exception $e) {
+            $this->errorResponse("Failed to get cache status");
+        }
+    }
+
+    public function validateCache() {
+        $data = $this->validateRequest(['device_id', 'cache_entries']);
+        try {
+            $invalidEntries = [];
+            foreach ($data['cache_entries'] as $entry) {
+                $stmt = $this->db->prepare("
+                    SELECT checksum 
+                    FROM cache_entries 
+                    WHERE device_id = :device_id 
+                    AND content_id = :content_id
+                ");
+                
+                $stmt->execute([
+                    'device_id' => $data['device_id'],
+                    'content_id' => $entry['content_id']
+                ]);
+                
+                $result = $stmt->fetch();
+                if (!$result || $result['checksum'] !== $entry['checksum']) {
+                    $invalidEntries[] = $entry['content_id'];
+                }
+            }
+
+            $this->jsonResponse([
+                'status' => 'success',
+                'invalid_entries' => $invalidEntries
+            ]);
+        } catch (\Exception $e) {
+            $this->errorResponse("Failed to validate cache");
+        }
+    }
+
+    public function updateCache() {
+        $data = $this->validateRequest(['device_id', 'content_id']);
+        try {
+            $stmt = $this->db->prepare("
+                REPLACE INTO cache_entries 
+                (device_id, content_id, checksum, size, last_accessed)
+                VALUES (:device_id, :content_id, :checksum, :size, CURRENT_TIMESTAMP)
+            ");
+            
+            $stmt->execute([
+                'device_id' => $data['device_id'],
+                'content_id' => $data['content_id'],
+                'checksum' => $data['checksum'],
+                'size' => $data['size']
+            ]);
+            
+            // Check if cache cleanup is needed
+            $this->cleanupCacheIfNeeded($data['device_id']);
+            
+            $this->jsonResponse(['status' => 'success']);
+        } catch (\Exception $e) {
+            $this->errorResponse("Failed to update cache");
+        }
+    }
+
+    public function clearCache($deviceId = null) {
+        try {
+            $this->db->beginTransaction();
+            
+            if ($deviceId) {
+                $stmt = $this->db->prepare("
+                    DELETE FROM cache_entries 
+                    WHERE device_id = :device_id
+                ");
+                $stmt->execute(['device_id' => $deviceId]);
+            } else {
+                $this->db->exec("DELETE FROM cache_entries");
+            }
+            
+            $this->db->commit();
+            $this->jsonResponse(['status' => 'success']);
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            $this->errorResponse("Failed to clear cache");
+        }
+    }
+
+    private function cleanupCacheIfNeeded($deviceId) {
+        $stmt = $this->db->prepare("
+            SELECT SUM(size) as total_size 
+            FROM cache_entries 
+            WHERE device_id = :device_id
+        ");
+        $stmt->execute(['device_id' => $deviceId]);
+        $result = $stmt->fetch();
+
+        if ($result['total_size'] > $this->maxCacheSize) {
+            // Remove oldest entries until under limit
+            $stmt = $this->db->prepare("
+                DELETE FROM cache_entries 
+                WHERE device_id = :device_id
+                AND id IN (
+                    SELECT id 
+                    FROM cache_entries 
+                    WHERE device_id = :device_id
+                    ORDER BY last_accessed ASC 
+                    LIMIT 10
+                )
+            ");
+            $stmt->execute(['device_id' => $deviceId]);
+        }
+    }
+
+    public function preloadCache() {
+        $data = $this->validateRequest(['device_id', 'playlist_id']);
+        try {
+            // Get media files from playlist
+            $stmt = $this->db->prepare("
+                SELECT m.* 
+                FROM playlist_media pm
+                JOIN media m ON pm.media_id = m.id
+                WHERE pm.playlist_id = :playlist_id
+                ORDER BY pm.order_number
+            ");
+            
+            $stmt->execute(['playlist_id' => $data['playlist_id']]);
+            $mediaFiles = $stmt->fetchAll();
+
+            // Queue files for caching
+            $stmt = $this->db->prepare("
+                INSERT INTO cache_queue 
+                (device_id, content_id, priority)
+                VALUES (:device_id, :content_id, :priority)
+                ON DUPLICATE KEY UPDATE priority = :priority
+            ");
+
+            foreach ($mediaFiles as $index => $media) {
+                $stmt->execute([
+                    'device_id' => $data['device_id'],
+                    'content_id' => $media['id'],
+                    'priority' => count($mediaFiles) - $index // Higher priority for earlier items
+                ]);
+            }
+
+            $this->jsonResponse([
+                'status' => 'success',
+                'queued_files' => count($mediaFiles)
+            ]);
+        } catch (\Exception $e) {
+            $this->errorResponse("Failed to preload cache");
+        }
+    }
+}
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/src/Controllers/GroupController.php ===
+
+<?php
+namespace Controllers;
+
+class GroupController extends BaseController {
+    public function getGroups() {
+        try {
+            $groups = $this->db->query("SELECT * FROM groups ORDER BY name")->fetchAll();
+            
+            // Get devices for each group
+            foreach ($groups as &$group) {
+                $stmt = $this->db->prepare("
+                    SELECT d.* 
+                    FROM devices d 
+                    JOIN device_group dg ON d.id = dg.device_id 
+                    WHERE dg.group_id = ?
+                ");
+                $stmt->execute([$group['id']]);
+                $group['devices'] = $stmt->fetchAll();
+            }
+            
+            $this->jsonResponse(['groups' => $groups]);
+        } catch (\Exception $e) {
+            $this->errorResponse("Failed to fetch groups");
+        }
+    }
+
+    public function createGroup() {
+        $data = $this->validateRequest(['name']);
+        try {
+            $stmt = $this->db->prepare("
+                INSERT INTO groups (name, description) 
+                VALUES (:name, :description)
+            ");
+            
+            $stmt->execute([
+                'name' => $data['name'],
+                'description' => $data['description'] ?? ''
+            ]);
+            
+            $groupId = $this->db->lastInsertId();
+
+            // Add devices if provided
+            if (!empty($data['device_ids'])) {
+                $this->assignDevicesToGroup($groupId, $data['device_ids']);
+            }
+
+            $this->jsonResponse([
+                'status' => 'success',
+                'id' => $groupId
+            ]);
+        } catch (\Exception $e) {
+            $this->errorResponse("Failed to create group");
+        }
+    }
+
+    public function updateGroup($id) {
+        $data = $this->validateRequest(['name']);
+        try {
+            $this->db->beginTransaction();
+
+            $stmt = $this->db->prepare("
+                UPDATE groups 
+                SET name = :name, description = :description 
+                WHERE id = :id
+            ");
+            
+            $stmt->execute([
+                'id' => $id,
+                'name' => $data['name'],
+                'description' => $data['description'] ?? ''
+            ]);
+
+            // Update device assignments if provided
+            if (isset($data['device_ids'])) {
+                // Remove existing assignments
+                $stmt = $this->db->prepare("DELETE FROM device_group WHERE group_id = ?");
+                $stmt->execute([$id]);
+
+                // Add new assignments
+                if (!empty($data['device_ids'])) {
+                    $this->assignDevicesToGroup($id, $data['device_ids']);
+                }
+            }
+
+            $this->db->commit();
+            $this->jsonResponse(['status' => 'success']);
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            $this->errorResponse("Failed to update group");
+        }
+    }
+
+    public function deleteGroup($id) {
+        try {
+            $this->db->beginTransaction();
+
+            // Remove device associations
+            $stmt = $this->db->prepare("DELETE FROM device_group WHERE group_id = ?");
+            $stmt->execute([$id]);
+
+            // Delete group
+            $stmt = $this->db->prepare("DELETE FROM groups WHERE id = ?");
+            $stmt->execute([$id]);
+
+            $this->db->commit();
+            $this->jsonResponse(['status' => 'success']);
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            $this->errorResponse("Failed to delete group");
+        }
+    }
+
+    private function assignDevicesToGroup($groupId, $deviceIds) {
+        $stmt = $this->db->prepare("
+            INSERT INTO device_group (device_id, group_id) 
+            VALUES (?, ?)
+        ");
+        
+        foreach ($deviceIds as $deviceId) {
+            $stmt->execute([$deviceId, $groupId]);
+        }
+    }
+
+    public function addDeviceToGroup() {
+        $data = $this->validateRequest(['device_id', 'group_id']);
+        try {
+            $stmt = $this->db->prepare("
+                INSERT INTO device_group (device_id, group_id) 
+                VALUES (:device_id, :group_id)
+            ");
+            
+            $stmt->execute([
+                'device_id' => $data['device_id'],
+                'group_id' => $data['group_id']
+            ]);
+            
+            $this->jsonResponse(['status' => 'success']);
+        } catch (\Exception $e) {
+            $this->errorResponse("Failed to add device to group");
+        }
+    }
+
+    public function removeDeviceFromGroup() {
+        $data = $this->validateRequest(['device_id', 'group_id']);
+        try {
+            $stmt = $this->db->prepare("
+                DELETE FROM device_group 
+                WHERE device_id = :device_id AND group_id = :group_id
+            ");
+            
+            $stmt->execute([
+                'device_id' => $data['device_id'],
+                'group_id' => $data['group_id']
+            ]);
+            
+            $this->jsonResponse(['status' => 'success']);
+        } catch (\Exception $e) {
+            $this->errorResponse("Failed to remove device from group");
+        }
+    }
+}
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/src/Controllers/SyncController.php ===
+
+<?php
+namespace Controllers;
+
+class SyncController extends BaseController {
+    public function getQueueItems($deviceId) {
+        try {
+            $stmt = $this->db->prepare("
+                SELECT sq.*, m.file_path, m.type
+                FROM sync_queue sq
+                LEFT JOIN media m ON sq.media_id = m.id
+                WHERE sq.device_id = :device_id 
+                AND sq.status = 'pending'
+                ORDER BY sq.priority DESC, sq.created_at ASC
+            ");
+            
+            $stmt->execute(['device_id' => $deviceId]);
+            $this->jsonResponse(['queue' => $stmt->fetchAll()]);
+        } catch (\Exception $e) {
+            $this->errorResponse("Failed to fetch sync queue");
+        }
+    }
+
+    public function addToQueue() {
+        $data = $this->validateRequest(['device_id', 'action']);
+        try {
+            $stmt = $this->db->prepare("
+                INSERT INTO sync_queue 
+                (device_id, action, data, media_id, priority) 
+                VALUES (:device_id, :action, :data, :media_id, :priority)
+            ");
+            
+            $stmt->execute([
+                'device_id' => $data['device_id'],
+                'action' => $data['action'],
+                'data' => json_encode($data['data'] ?? []),
+                'media_id' => $data['media_id'] ?? null,
+                'priority' => $data['priority'] ?? 1
+            ]);
+            
+            $this->jsonResponse([
+                'status' => 'success',
+                'id' => $this->db->lastInsertId()
+            ]);
+        } catch (\Exception $e) {
+            $this->errorResponse("Failed to add to sync queue");
+        }
+    }
+
+    public function updateStatus() {
+        $data = $this->validateRequest(['id', 'status']);
+        try {
+            $stmt = $this->db->prepare("
+                UPDATE sync_queue 
+                SET status = :status, 
+                    completed_at = CASE 
+                        WHEN :status IN ('completed', 'failed') THEN CURRENT_TIMESTAMP 
+                        ELSE NULL 
+                    END,
+                    error_message = :error_message
+                WHERE id = :id
+            ");
+            
+            $stmt->execute([
+                'id' => $data['id'],
+                'status' => $data['status'],
+                'error_message' => $data['error_message'] ?? null
+            ]);
+            
+            $this->jsonResponse(['status' => 'success']);
+        } catch (\Exception $e) {
+            $this->errorResponse("Failed to update sync status");
+        }
+    }
+
+    public function deviceHeartbeat($deviceId) {
+        try {
+            $stmt = $this->db->prepare("
+                UPDATE devices 
+                SET last_heartbeat = CURRENT_TIMESTAMP,
+                    status = CASE 
+                        WHEN status = 'offline' THEN 'online'
+                        ELSE status 
+                    END
+                WHERE id = :device_id
+            ");
+            
+            $stmt->execute(['device_id' => $deviceId]);
+            
+            // Get pending sync items count
+            $stmt = $this->db->prepare("
+                SELECT COUNT(*) as pending_count 
+                FROM sync_queue 
+                WHERE device_id = :device_id AND status = 'pending'
+            ");
+            
+            $stmt->execute(['device_id' => $deviceId]);
+            $result = $stmt->fetch();
+            
+            $this->jsonResponse([
+                'status' => 'success',
+                'pending_syncs' => $result['pending_count']
+            ]);
+        } catch (\Exception $e) {
+            $this->errorResponse("Failed to update device heartbeat");
+        }
+    }
+
+    public function bulkSync() {
+        $data = $this->validateRequest(['device_ids', 'action']);
+        try {
+            $this->db->beginTransaction();
+            
+            $stmt = $this->db->prepare("
+                INSERT INTO sync_queue 
+                (device_id, action, data, priority) 
+                VALUES (:device_id, :action, :data, :priority)
+            ");
+            
+            foreach ($data['device_ids'] as $deviceId) {
+                $stmt->execute([
+                    'device_id' => $deviceId,
+                    'action' => $data['action'],
+                    'data' => json_encode($data['data'] ?? []),
+                    'priority' => $data['priority'] ?? 1
+                ]);
+            }
+            
+            $this->db->commit();
+            $this->jsonResponse(['status' => 'success']);
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            $this->errorResponse("Failed to create bulk sync");
+        }
+    }
+}

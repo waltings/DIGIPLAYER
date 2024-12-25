@@ -1,0 +1,201 @@
+<?php
+namespace Controllers;
+
+class DeviceController extends BaseController {
+    public function getDevices() {
+        try {
+            $sql = "SELECT d.*, 
+                    GROUP_CONCAT(g.name) as group_names,
+                    p.name as playlist_name,
+                    ds.cpu_usage,
+                    ds.memory_usage,
+                    ds.last_heartbeat,
+                    dl.location_name
+                FROM devices d
+                LEFT JOIN device_groups dg ON d.id = dg.device_id
+                LEFT JOIN groups g ON dg.group_id = g.id
+                LEFT JOIN playlists p ON d.current_playlist_id = p.id
+                LEFT JOIN device_stats ds ON d.id = ds.device_id
+                LEFT JOIN device_locations dl ON d.id = dl.device_id
+                WHERE 1=1";
+
+            $params = [];
+
+            // Apply filters
+            if (isset($_GET['status'])) {
+                $sql .= " AND d.status = ?";
+                $params[] = $_GET['status'];
+            }
+            
+            if (isset($_GET['group'])) {
+                $sql .= " AND g.id = ?";
+                $params[] = $_GET['group'];
+            }
+
+            if (isset($_GET['location'])) {
+                $sql .= " AND dl.location_name LIKE ?";
+                $params[] = "%{$_GET['location']}%";
+            }
+
+            $sql .= " GROUP BY d.id ORDER BY d.name";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            
+            $this->jsonResponse(['devices' => $stmt->fetchAll()]);
+        } catch (\Exception $e) {
+            $this->errorResponse("Failed to fetch devices: " . $e->getMessage());
+        }
+    }
+
+    public function createDevice() {
+        try {
+            $data = json_decode(file_get_contents('php://input'), true);
+            
+            if (!isset($data['name']) || !isset($data['ip_address'])) {
+                throw new \Exception('Name and IP address are required');
+            }
+            
+            $this->db->beginTransaction();
+            
+            // Insert device
+            $stmt = $this->db->prepare("
+                INSERT INTO devices (name, ip_address, status, description)
+                VALUES (?, ?, 'pending', ?)
+            ");
+            $stmt->execute([$data['name'], $data['ip_address'], $data['description'] ?? null]);
+            
+            $deviceId = $this->db->lastInsertId();
+            
+            // Add to group if specified
+            if (!empty($data['group_id'])) {
+                $stmt = $this->db->prepare("
+                    INSERT INTO device_groups (device_id, group_id)
+                    VALUES (?, ?)
+                ");
+                $stmt->execute([$deviceId, $data['group_id']]);
+            }
+            
+            // Add location if specified
+            if (!empty($data['location'])) {
+                $stmt = $this->db->prepare("
+                    INSERT INTO device_locations (device_id, location_name)
+                    VALUES (?, ?)
+                ");
+                $stmt->execute([$deviceId, $data['location']]);
+            }
+            
+            $this->db->commit();
+            $this->jsonResponse(['status' => 'success', 'id' => $deviceId]);
+            
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            $this->errorResponse("Failed to create device: " . $e->getMessage());
+        }
+    }
+
+    public function updateDevice($id) {
+        try {
+            $data = json_decode(file_get_contents('php://input'), true);
+            
+            $this->db->beginTransaction();
+            
+            // Update device
+            $stmt = $this->db->prepare("
+                UPDATE devices 
+                SET name = ?,
+                    ip_address = ?,
+                    status = ?,
+                    description = ?
+                WHERE id = ?
+            ");
+            
+            $stmt->execute([
+                $data['name'],
+                $data['ip_address'],
+                $data['status'] ?? 'pending',
+                $data['description'] ?? null,
+                $id
+            ]);
+            
+            // Update group if specified
+            if (isset($data['group_id'])) {
+                $stmt = $this->db->prepare("DELETE FROM device_groups WHERE device_id = ?");
+                $stmt->execute([$id]);
+                
+                if ($data['group_id']) {
+                    $stmt = $this->db->prepare("INSERT INTO device_groups (device_id, group_id) VALUES (?, ?)");
+                    $stmt->execute([$id, $data['group_id']]);
+                }
+            }
+            
+            $this->db->commit();
+            $this->jsonResponse(['status' => 'success']);
+            
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            $this->errorResponse("Failed to update device: " . $e->getMessage());
+        }
+    }
+
+    public function deleteDevice($id) {
+        try {
+            $stmt = $this->db->prepare("DELETE FROM devices WHERE id = ?");
+            $stmt->execute([$id]);
+            $this->jsonResponse(['status' => 'success']);
+        } catch (\Exception $e) {
+            $this->errorResponse("Failed to delete device");
+        }
+    }
+
+    public function bulkAction() {
+        try {
+            $data = json_decode(file_get_contents('php://input'), true);
+            
+            if (!isset($data['devices']) || !isset($data['action'])) {
+                throw new \Exception('Devices and action are required');
+            }
+            
+            $this->db->beginTransaction();
+            
+            foreach ($data['devices'] as $deviceId) {
+                switch ($data['action']) {
+                    case 'restart':
+                        $this->queueDeviceCommand($deviceId, 'restart');
+                        break;
+                    case 'update':
+                        $this->queueDeviceCommand($deviceId, 'update');
+                        break;
+                    case 'change_group':
+                        if (!isset($data['group_id'])) break;
+                        $this->updateDeviceGroup($deviceId, $data['group_id']);
+                        break;
+                }
+            }
+            
+            $this->db->commit();
+            $this->jsonResponse(['status' => 'success']);
+            
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            $this->errorResponse("Failed to perform bulk action: " . $e->getMessage());
+        }
+    }
+
+    private function queueDeviceCommand($deviceId, $command) {
+        $stmt = $this->db->prepare("
+            INSERT INTO scheduled_commands (device_id, command, status)
+            VALUES (?, ?, 'pending')
+        ");
+        $stmt->execute([$deviceId, $command]);
+    }
+    
+    private function updateDeviceGroup($deviceId, $groupId) {
+        $stmt = $this->db->prepare("
+            INSERT INTO device_groups (device_id, group_id)
+            VALUES (?, ?)
+            ON DUPLICATE KEY UPDATE group_id = VALUES(group_id)
+        ");
+        $stmt->execute([$deviceId, $groupId]);
+    }
+}

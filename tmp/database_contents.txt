@@ -1,0 +1,698 @@
+
+# Directory: /home/vhost15998ssh/htdocs/digiplayer/database
+
+# Directory: /home/vhost15998ssh/htdocs/digiplayer/database/maintenance
+
+# Directory: /home/vhost15998ssh/htdocs/digiplayer/database/seeds
+
+# Directory: /home/vhost15998ssh/htdocs/digiplayer/database/migrations
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/database/init.sh ===
+
+#!/bin/bash
+DB_HOST="localhost"
+DB_NAME="vhost15998s0"
+DB_USER="vhost15998s0"
+DB_PASS="Digiplayer1-401"
+
+echo "Initializing database..."
+
+# Run migrations
+for migration in migrations/*.sql; do
+    echo "Running migration: $migration"
+    mysql -h $DB_HOST -u $DB_USER -p$DB_PASS $DB_NAME < $migration
+done
+
+# Run seeds
+for seed in seeds/*.sql; do
+    echo "Running seed: $seed"
+    mysql -h $DB_HOST -u $DB_USER -p$DB_PASS $DB_NAME < $seed
+done
+
+echo "Database initialization completed!"
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/database/playlists.sql ===
+
+CREATE TABLE IF NOT EXISTS playlists (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS playlist_items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    playlist_id INT,
+    media_id INT,
+    order_index INT,
+    duration INT DEFAULT 0,
+    FOREIGN KEY (playlist_id) REFERENCES playlists(id)
+);
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/database/create_playlists_table.sql ===
+
+CREATE TABLE IF NOT EXISTS playlists (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/database/maintenance/cleanup.sh ===
+
+#!/bin/bash
+
+DB_HOST="localhost"
+DB_NAME="vhost15998s0"
+DB_USER="vhost15998s0"
+DB_PASS="Digiplayer1-401"
+
+# Clean up old logs
+echo "Cleaning up old logs..."
+mysql -h $DB_HOST -u $DB_USER -p$DB_PASS $DB_NAME << EOF
+    -- Delete logs older than 30 days
+    DELETE FROM system_logs WHERE created_at < DATE_SUB(NOW(), INTERVAL 30 DAY);
+    DELETE FROM activity_logs WHERE created_at < DATE_SUB(NOW(), INTERVAL 30 DAY);
+    DELETE FROM connectivity_logs WHERE created_at < DATE_SUB(NOW(), INTERVAL 30 DAY);
+
+    -- Delete performance metrics older than 90 days
+    DELETE FROM performance_metrics WHERE timestamp < DATE_SUB(NOW(), INTERVAL 90 DAY);
+
+    -- Delete resolved alerts older than 30 days
+    DELETE FROM alerts WHERE status = 'resolved' AND resolved_at < DATE_SUB(NOW(), INTERVAL 30 DAY);
+
+    -- Delete old playback logs
+    DELETE FROM playback_logs WHERE start_time < DATE_SUB(NOW(), INTERVAL 90 DAY);
+
+    -- Delete old sync logs
+    DELETE FROM sync_logs WHERE completed_at < DATE_SUB(NOW(), INTERVAL 30 DAY);
+
+    -- Optimize tables
+    OPTIMIZE TABLE system_logs, activity_logs, connectivity_logs, 
+                 performance_metrics, alerts, playback_logs, sync_logs;
+EOF
+
+# Clean up unused media files
+echo "Cleaning up unused media files..."
+find /home/vhost15998ssh/htdocs/digiplayer/public/uploads/media -type f -mtime +90 -name "*.tmp" -delete
+
+echo "Cleanup completed!"
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/database/maintenance/backup.sh ===
+
+#!/bin/bash
+
+# Database connection details
+DB_HOST="localhost"
+DB_NAME="vhost15998s0"
+DB_USER="vhost15998s0"
+DB_PASS="Digiplayer1-401"
+
+# Backup directories
+BACKUP_DIR="/home/vhost15998ssh/backups"
+MEDIA_DIR="/home/vhost15998ssh/htdocs/digiplayer/public/uploads/media"
+DATE=$(date +"%Y%m%d_%H%M%S")
+BACKUP_PATH="${BACKUP_DIR}/${DATE}"
+
+# Create backup directories
+mkdir -p "${BACKUP_PATH}"
+mkdir -p "${BACKUP_PATH}/media"
+
+# Database backup
+echo "Creating database backup..."
+mysqldump -h $DB_HOST -u $DB_USER -p$DB_PASS $DB_NAME > "${BACKUP_PATH}/database.sql"
+
+# Media files backup
+echo "Creating media files backup..."
+rsync -av $MEDIA_DIR/ "${BACKUP_PATH}/media/"
+
+# Create backup archive
+tar -czf "${BACKUP_PATH}.tar.gz" -C "${BACKUP_DIR}" "${DATE}"
+
+# Cleanup temporary files
+rm -rf "${BACKUP_PATH}"
+
+# Keep only last 7 daily backups
+find "${BACKUP_DIR}" -name "*.tar.gz" -mtime +7 -delete
+
+echo "Backup completed: ${BACKUP_PATH}.tar.gz"
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/database/maintenance/health_check.sh ===
+
+#!/bin/bash
+
+DB_HOST="localhost"
+DB_NAME="vhost15998s0"
+DB_USER="vhost15998s0"
+DB_PASS="Digiplayer1-401"
+
+# Check database connection
+mysql -h $DB_HOST -u $DB_USER -p$DB_PASS -e "SELECT 1;" $DB_NAME > /dev/null 2>&1
+if [ $? -ne 0 ]; then
+    echo "ERROR: Database connection failed"
+    exit 1
+fi
+
+# Check disk space
+DISK_USAGE=$(df -h / | awk 'NR==2 {print $5}' | sed 's/%//')
+if [ $DISK_USAGE -gt 90 ]; then
+    echo "WARNING: Disk usage is above 90%"
+fi
+
+# Check media directory permissions
+MEDIA_DIR="/home/vhost15998ssh/htdocs/digiplayer/public/uploads/media"
+if [ ! -w "$MEDIA_DIR" ]; then
+    echo "ERROR: Media directory is not writable"
+fi
+
+# Check for offline devices
+mysql -h $DB_HOST -u $DB_USER -p$DB_PASS $DB_NAME << EOF
+    SELECT COUNT(*) as offline_count FROM devices 
+    WHERE status = 'offline' 
+    AND last_heartbeat < DATE_SUB(NOW(), INTERVAL 5 MINUTE);
+EOF
+
+# Check system load
+LOAD=$(uptime | awk -F'load average:' '{ print $2 }' | cut -d, -f1)
+if [ $(echo "$LOAD > 5" | bc) -eq 1 ]; then
+    echo "WARNING: High system load: $LOAD"
+fi
+
+# Generate health report
+REPORT_DIR="/home/vhost15998ssh/logs/health"
+mkdir -p $REPORT_DIR
+REPORT_FILE="$REPORT_DIR/health_$(date +%Y%m%d).log"
+
+{
+    echo "=== Health Check Report $(date) ==="
+    echo "Database Status: OK"
+    echo "Disk Usage: ${DISK_USAGE}%"
+    echo "System Load: $LOAD"
+    
+    # Get some statistics
+    mysql -h $DB_HOST -u $DB_USER -p$DB_PASS $DB_NAME << EOF
+        SELECT 
+            (SELECT COUNT(*) FROM devices WHERE status = 'online') as online_devices,
+            (SELECT COUNT(*) FROM alerts WHERE status = 'active') as active_alerts,
+            (SELECT COUNT(*) FROM sync_queue WHERE status = 'pending') as pending_syncs;
+EOF
+} > "$REPORT_FILE"
+
+echo "Health check completed. Report saved to: $REPORT_FILE"
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/database/maintenance/optimize.sh ===
+
+#!/bin/bash
+
+DB_HOST="localhost"
+DB_NAME="vhost15998s0"
+DB_USER="vhost15998s0"
+DB_PASS="Digiplayer1-401"
+
+# Optimize database tables
+echo "Optimizing database tables..."
+mysql -h $DB_HOST -u $DB_USER -p$DB_PASS $DB_NAME << EOF
+    ANALYZE TABLE users, devices, media, playlists, schedules, groups;
+    OPTIMIZE TABLE users, devices, media, playlists, schedules, groups;
+EOF
+
+# Clean up temporary files
+echo "Cleaning up temporary files..."
+find /home/vhost15998ssh/htdocs/digiplayer/public/uploads/temp -type f -mtime +1 -delete
+
+# Reset failed login attempts
+echo "Resetting failed login attempts..."
+mysql -h $DB_HOST -u $DB_USER -p$DB_PASS $DB_NAME << EOF
+    UPDATE users SET failed_attempts = 0 
+    WHERE last_failed_login < DATE_SUB(NOW(), INTERVAL 24 HOUR);
+EOF
+
+echo "Optimization completed!"
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/database/maintenance/crontab.txt ===
+
+# Daily backup at 2 AM
+0 2 * * * /home/vhost15998ssh/htdocs/digiplayer/database/maintenance/backup.sh
+
+# Daily cleanup at 3 AM
+0 3 * * * /home/vhost15998ssh/htdocs/digiplayer/database/maintenance/cleanup.sh
+
+# Health check every hour
+0 * * * * /home/vhost15998ssh/htdocs/digiplayer/database/maintenance/health_check.sh
+
+# Weekly optimization at 1 AM on Sunday
+0 1 * * 0 /home/vhost15998ssh/htdocs/digiplayer/database/maintenance/optimize.sh
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/database/seeds/01_roles_and_permissions.sql ===
+
+-- Default roles
+INSERT INTO roles (name, permissions) VALUES
+('admin', '{
+    "users": ["create", "read", "update", "delete"],
+    "devices": ["create", "read", "update", "delete"],
+    "media": ["create", "read", "update", "delete"],
+    "playlists": ["create", "read", "update", "delete"],
+    "schedules": ["create", "read", "update", "delete"],
+    "groups": ["create", "read", "update", "delete"],
+    "settings": ["read", "update"],
+    "monitoring": ["read"]
+}'),
+('manager', '{
+    "devices": ["read", "update"],
+    "media": ["create", "read", "update"],
+    "playlists": ["create", "read", "update"],
+    "schedules": ["create", "read", "update"],
+    "groups": ["read"],
+    "monitoring": ["read"]
+}'),
+('operator', '{
+    "devices": ["read"],
+    "media": ["read"],
+    "playlists": ["read"],
+    "schedules": ["read"],
+    "monitoring": ["read"]
+}');
+
+-- Default admin user (password: Digiplayer1-401)
+INSERT INTO users (name, email, password, role_id, status) VALUES
+('Admin', 'admin@digiplayer.local', '$2y$10$KN8nKj1i98AV8HmTD.4jhu5SWU0.FrCQ3G6TrQZPQyf40eL5Ck5Fi', 1, 'active');
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/database/seeds/05_demo_schedules.sql ===
+
+-- Demo schedules
+INSERT INTO schedules (device_id, playlist_id, start_time, end_time, days_of_week) VALUES
+(1, 1, '09:00:00', '18:00:00', 'MON,TUE,WED,THU,FRI'),
+(1, 2, '18:00:00', '09:00:00', 'MON,TUE,WED,THU,FRI'),
+(2, 1, '00:00:00', '23:59:59', '*');
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/database/seeds/03_default_settings.sql ===
+
+-- Create settings table if not exists
+CREATE TABLE IF NOT EXISTS settings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    category VARCHAR(50) NOT NULL,
+    key_name VARCHAR(100) NOT NULL,
+    value TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_setting (category, key_name)
+);
+
+-- Insert default settings
+INSERT INTO settings (category, key_name, value) VALUES
+-- General Settings
+('general', 'system_name', 'DigiPlayer'),
+('general', 'timezone', 'Europe/Tallinn'),
+('general', 'language', 'en'),
+('general', 'default_content_duration', '10'),
+
+-- Storage Settings
+('storage', 'media_path', '/uploads/media'),
+('storage', 'max_file_size', '104857600'),
+('storage', 'allowed_extensions', '["jpg","jpeg","png","gif","mp4","webm"]'),
+('storage', 'cleanup_threshold', '90'),
+
+-- Network Settings
+('network', 'device_timeout', '300'),
+('network', 'sync_interval', '60'),
+('network', 'max_retry_attempts', '3'),
+('network', 'heartbeat_interval', '30'),
+
+-- Monitoring Settings
+('monitoring', 'alert_email', 'alerts@digiplayer.local'),
+('monitoring', 'log_retention_days', '30'),
+('monitoring', 'stats_retention_days', '90'),
+('monitoring', 'enable_error_reporting', 'true'),
+
+-- Playback Settings
+('playback', 'default_transition', 'fade'),
+('playback', 'transition_duration', '1000'),
+('playback', 'enable_audio', 'false'),
+('playback', 'default_volume', '50');
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/database/seeds/04_demo_content.sql ===
+
+-- Demo media content
+INSERT INTO media (name, type, file_path, size, duration, resolution) VALUES
+('Welcome Screen', 'image', '/demo/welcome.jpg', 524288, NULL, '1920x1080'),
+('Company Logo', 'image', '/demo/logo.png', 262144, NULL, '800x600'),
+('Product Demo', 'video', '/demo/product.mp4', 5242880, 30, '1920x1080'),
+('News Ticker', 'image', '/demo/news.jpg', 393216, NULL, '1920x1080');
+
+-- Demo playlist
+INSERT INTO playlists (name, description, status, created_by) VALUES
+('Default Playlist', 'Default content rotation', 'active', 1),
+('Welcome Sequence', 'Lobby welcome content', 'active', 1);
+
+-- Demo playlist content
+INSERT INTO playlist_media (playlist_id, media_id, order_number, duration) VALUES
+(1, 1, 1, 10),
+(1, 2, 2, 10),
+(1, 3, 3, 30),
+(2, 1, 1, 15),
+(2, 4, 2, 20);
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/database/seeds/02_default_groups.sql ===
+
+-- Default device groups
+INSERT INTO groups (name, description) VALUES
+('Default', 'Default group for new devices'),
+('Lobby Displays', 'Displays in lobby areas'),
+('Meeting Rooms', 'Displays in meeting rooms'),
+('Public Areas', 'Displays in public areas');
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/database/migrations/08_create_monitoring_tables.sql ===
+
+-- System monitoring table
+CREATE TABLE system_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    type ENUM('info', 'warning', 'error', 'critical') NOT NULL,
+    component VARCHAR(50) NOT NULL,
+    message TEXT NOT NULL,
+    details JSON,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_type_component (type, component),
+    INDEX idx_created_at (created_at)
+);
+
+-- Performance monitoring
+CREATE TABLE performance_metrics (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    device_id INT,
+    metric_type VARCHAR(50) NOT NULL,
+    value FLOAT NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE,
+    INDEX idx_device_metric (device_id, metric_type),
+    INDEX idx_timestamp (timestamp)
+);
+
+-- Content playback logs
+CREATE TABLE playback_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    device_id INT NOT NULL,
+    media_id INT NOT NULL,
+    playlist_id INT NOT NULL,
+    start_time TIMESTAMP NOT NULL,
+    end_time TIMESTAMP,
+    duration INT,
+    status ENUM('completed', 'interrupted', 'error') NOT NULL,
+    error_message TEXT,
+    FOREIGN KEY (device_id) REFERENCES devices(id),
+    FOREIGN KEY (media_id) REFERENCES media(id),
+    FOREIGN KEY (playlist_id) REFERENCES playlists(id),
+    INDEX idx_device_time (device_id, start_time),
+    INDEX idx_media_time (media_id, start_time),
+    INDEX idx_playlist_time (playlist_id, start_time)
+);
+
+-- User activity logging
+CREATE TABLE activity_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    action VARCHAR(50) NOT NULL,
+    entity_type VARCHAR(50) NOT NULL,
+    entity_id INT,
+    details JSON,
+    ip_address VARCHAR(45),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    INDEX idx_user_action (user_id, action),
+    INDEX idx_entity (entity_type, entity_id),
+    INDEX idx_created_at (created_at)
+);
+
+-- Alert monitoring
+CREATE TABLE alerts (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    device_id INT,
+    type VARCHAR(50) NOT NULL,
+    severity ENUM('low', 'medium', 'high', 'critical') NOT NULL,
+    message TEXT NOT NULL,
+    status ENUM('active', 'acknowledged', 'resolved') DEFAULT 'active',
+    acknowledged_by INT,
+    acknowledged_at TIMESTAMP,
+    resolved_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE,
+    FOREIGN KEY (acknowledged_by) REFERENCES users(id),
+    INDEX idx_device_status (device_id, status),
+    INDEX idx_severity (severity),
+    INDEX idx_created_at (created_at)
+);
+
+-- Device connectivity logs
+CREATE TABLE connectivity_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    device_id INT NOT NULL,
+    event_type ENUM('connect', 'disconnect', 'timeout') NOT NULL,
+    connection_type VARCHAR(50),
+    ip_address VARCHAR(45),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE,
+    INDEX idx_device_event (device_id, event_type),
+    INDEX idx_created_at (created_at)
+);
+
+-- Content synchronization logs
+CREATE TABLE sync_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    device_id INT NOT NULL,
+    content_type VARCHAR(50) NOT NULL,
+    content_id INT NOT NULL,
+    status ENUM('pending', 'in_progress', 'completed', 'failed') NOT NULL,
+    started_at TIMESTAMP,
+    completed_at TIMESTAMP,
+    error_message TEXT,
+    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE,
+    INDEX idx_device_status (device_id, status),
+    INDEX idx_content (content_type, content_id),
+    INDEX idx_started_at (started_at)
+);
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/database/migrations/02_create_devices_table.sql ===
+
+CREATE TABLE devices (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    ip_address VARCHAR(45),
+    status ENUM('online', 'offline', 'pending') DEFAULT 'pending',
+    current_playlist_id INT,
+    current_media_id INT,
+    last_heartbeat TIMESTAMP,
+    last_sync TIMESTAMP,
+    config JSON,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE device_stats (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    device_id INT NOT NULL,
+    cpu_usage FLOAT,
+    memory_usage FLOAT,
+    storage_usage FLOAT,
+    temperature FLOAT,
+    network_speed FLOAT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
+);
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/database/migrations/03_create_media_table.sql ===
+
+CREATE TABLE media (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    type ENUM('image', 'video') NOT NULL,
+    file_path VARCHAR(255) NOT NULL,
+    size BIGINT,
+    duration INT,
+    resolution VARCHAR(20),
+    checksum VARCHAR(64),
+    uploaded_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (uploaded_by) REFERENCES users(id)
+);
+
+CREATE TABLE media_metadata (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    media_id INT NOT NULL,
+    metadata JSON,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (media_id) REFERENCES media(id) ON DELETE CASCADE
+);
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/database/migrations/07_create_indexes.sql ===
+
+-- Users and Roles indexes
+ALTER TABLE users ADD INDEX idx_email (email);
+ALTER TABLE users ADD INDEX idx_status (status);
+ALTER TABLE users ADD INDEX idx_role (role_id);
+
+-- Devices indexes
+ALTER TABLE devices ADD INDEX idx_status (status);
+ALTER TABLE devices ADD INDEX idx_last_heartbeat (last_heartbeat);
+ALTER TABLE device_stats ADD INDEX idx_device_created (device_id, created_at);
+ALTER TABLE devices ADD INDEX idx_current_playlist (current_playlist_id);
+
+-- Media indexes
+ALTER TABLE media ADD INDEX idx_type (type);
+ALTER TABLE media ADD INDEX idx_uploaded_by (uploaded_by);
+ALTER TABLE media ADD INDEX idx_created_at (created_at);
+
+-- Playlists indexes
+ALTER TABLE playlists ADD INDEX idx_status (status);
+ALTER TABLE playlists ADD INDEX idx_schedule_type (schedule_type);
+ALTER TABLE playlist_media ADD INDEX idx_order (playlist_id, order_number);
+
+-- Schedule indexes
+ALTER TABLE schedules ADD INDEX idx_device_time (device_id, start_time, end_time);
+ALTER TABLE schedules ADD INDEX idx_exception_date (exception_date);
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/database/migrations/04_create_playlists_table.sql ===
+
+CREATE TABLE playlists (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    status ENUM('active', 'inactive') DEFAULT 'active',
+    schedule_type ENUM('always', 'scheduled') DEFAULT 'always',
+    created_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES users(id)
+);
+
+CREATE TABLE playlist_media (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    playlist_id INT NOT NULL,
+    media_id INT NOT NULL,
+    order_number INT NOT NULL,
+    duration INT,
+    transition_type VARCHAR(50) DEFAULT 'none',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (playlist_id) REFERENCES playlists(id) ON DELETE CASCADE,
+    FOREIGN KEY (media_id) REFERENCES media(id) ON DELETE CASCADE
+);
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/database/migrations/06_create_groups_table.sql ===
+
+CREATE TABLE groups (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE device_group (
+    device_id INT NOT NULL,
+    group_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (device_id, group_id),
+    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE,
+    FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE
+);
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/database/migrations/test_db.php ===
+
+<?php
+try {
+    $db = new PDO("mysql:unix_socket=/var/lib/mysql/mysql.sock;dbname=vhost15998s0", "vhost15998s0", "Digiplayer1-401");
+    echo "Database connection successful!\n";
+    
+    $stmt = $db->query("SELECT COUNT(*) FROM users");
+    $count = $stmt->fetchColumn();
+    echo "Users in database: " . $count . "\n";
+} catch (PDOException $e) {
+    echo "Connection failed: " . $e->getMessage() . "\n";
+}
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/database/migrations/01_create_users_table.sql ===
+
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    role_id INT NOT NULL,
+    status ENUM('active', 'inactive') DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE roles (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50) NOT NULL,
+    permissions JSON,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/database/migrations/05_create_schedules_table.sql ===
+
+CREATE TABLE schedules (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    device_id INT NOT NULL,
+    playlist_id INT NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    days_of_week VARCHAR(20) DEFAULT '*',
+    priority INT DEFAULT 1,
+    is_exception BOOLEAN DEFAULT FALSE,
+    exception_date DATE,
+    timezone VARCHAR(50) DEFAULT 'UTC',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE,
+    FOREIGN KEY (playlist_id) REFERENCES playlists(id) ON DELETE CASCADE
+);
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/database/migrations/check_tables.php ===
+
+<?php
+$db = new PDO("mysql:unix_socket=/var/lib/mysql/mysql.sock;dbname=vhost15998s0", "vhost15998s0", "Digiplayer1-401");
+$tables = $db->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
+echo "Existing tables:\n";
+print_r($tables);
+
+=== File: /home/vhost15998ssh/htdocs/digiplayer/database/migrations/001_create_playlists_tables.php ===
+
+<?php
+
+return [
+    'up' => "
+        CREATE TABLE IF NOT EXISTS playlists (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            description TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS playlist_items (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            playlist_id INT NOT NULL,
+            media_id INT NOT NULL,
+            order_index INT NOT NULL DEFAULT 0,
+            duration INT NOT NULL DEFAULT 10,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (playlist_id) REFERENCES playlists(id),
+            FOREIGN KEY (media_id) REFERENCES media(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS playlist_schedules (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            playlist_id INT NOT NULL,
+            start_date DATE NOT NULL,
+            end_date DATE,
+            start_time TIME NOT NULL,
+            end_time TIME NOT NULL,
+            days VARCHAR(20) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (playlist_id) REFERENCES playlists(id)
+        );
+    ",
+    'down' => "
+        DROP TABLE IF EXISTS playlist_schedules;
+        DROP TABLE IF EXISTS playlist_items;
+        DROP TABLE IF EXISTS playlists;
+    "
+];

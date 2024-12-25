@@ -1,0 +1,11 @@
+# Daily backup at 2 AM
+0 2 * * * /home/vhost15998ssh/htdocs/digiplayer/database/maintenance/backup.sh
+
+# Daily cleanup at 3 AM
+0 3 * * * /home/vhost15998ssh/htdocs/digiplayer/database/maintenance/cleanup.sh
+
+# Health check every hour
+0 * * * * /home/vhost15998ssh/htdocs/digiplayer/database/maintenance/health_check.sh
+
+# Weekly optimization at 1 AM on Sunday
+0 1 * * 0 /home/vhost15998ssh/htdocs/digiplayer/database/maintenance/optimize.sh
