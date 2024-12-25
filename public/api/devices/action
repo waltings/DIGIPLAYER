@@ -1,0 +1,42 @@
+<?php
+header('Content-Type: application/json');
+
+$logFile = __DIR__ . '/debug.log';
+file_put_contents($logFile, date('Y-m-d H:i:s') . " - Device action request received\n", FILE_APPEND);
+
+try {
+   if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+       $data = json_decode(file_get_contents('php://input'), true);
+       $deviceId = $data['id'];
+       $action = $data['action'];
+       
+       // Log the action request
+       file_put_contents($logFile, date('Y-m-d H:i:s') . " - Action: $action for device: $deviceId\n", FILE_APPEND);
+       
+       switch ($action) {
+           case 'reboot':
+               // Execute reboot command via SSH
+               $response = ['status' => 'success', 'message' => 'Device reboot initiated'];
+               break;
+               
+           case 'shutdown':
+               // Execute shutdown command via SSH
+               $response = ['status' => 'success', 'message' => 'Device shutdown initiated'];
+               break;
+               
+           case 'start':
+               // Execute wake-on-lan or similar
+               $response = ['status' => 'success', 'message' => 'Device startup initiated'];
+               break;
+               
+           default:
+               throw new Exception("Unknown action: $action");
+       }
+       
+       echo json_encode($response);
+   }
+} catch (Exception $e) {
+   file_put_contents($logFile, date('Y-m-d H:i:s') . " - Error: " . $e->getMessage() . "\n", FILE_APPEND);
+   http_response_code(500);
+   echo json_encode(['error' => $e->getMessage()]);
+}

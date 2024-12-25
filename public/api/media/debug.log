@@ -1,0 +1,244 @@
+2024-12-15 23:07:10 - Request method: GET
+2024-12-15 23:07:10 - Fetched all media, count: 0
+2024-12-15 23:07:11 - Request method: GET
+2024-12-15 23:07:11 - Fetched all media, count: 0
+2024-12-15 23:07:37 - Request method: GET
+2024-12-15 23:07:37 - Fetched all media, count: 0
+2024-12-15 23:07:38 - Request method: GET
+2024-12-15 23:07:38 - Fetched all media, count: 0
+2024-12-15 23:07:46 - Request method: POST
+2024-12-15 23:07:46 - Received POST request
+2024-12-15 23:07:46 - Received file: bodyfence_2.png, type: image/png
+2024-12-15 23:07:46 - File uploaded successfully. Type: image, Resolution: 900x557
+2024-12-15 23:07:46 - Inserting into database - Name: bodyfence_2, Type: image, Path: /digiplayer/public/uploads/media/1734296866_bodyfence_2.png
+2024-12-15 23:07:46 - Media inserted successfully with ID: 1
+2024-12-15 23:07:46 - Request method: GET
+2024-12-15 23:07:46 - Fetched all media, count: 1
+2024-12-15 23:08:02 - Request method: POST
+2024-12-15 23:08:02 - Received POST request
+2024-12-15 23:08:02 - Received file: jazz_Qkaart_nov24_1.mp4, type: video/mp4
+2024-12-15 23:08:02 - File uploaded successfully. Type: video, Resolution: 
+2024-12-15 23:08:02 - Inserting into database - Name: jazz_Qkaart_nov24_1, Type: video, Path: /digiplayer/public/uploads/media/1734296882_jazz_Qkaart_nov24_1.mp4
+2024-12-15 23:08:02 - Media inserted successfully with ID: 2
+2024-12-15 23:08:02 - Request method: GET
+2024-12-15 23:08:02 - Fetched all media, count: 2
+2024-12-15 23:09:30 - Request method: GET
+2024-12-15 23:09:30 - Fetched all media, count: 2
+2024-12-15 23:09:31 - Request method: GET
+2024-12-15 23:09:31 - Fetched all media, count: 2
+2024-12-15 23:09:32 - Request method: GET
+2024-12-15 23:09:32 - Fetched all media, count: 2
+2024-12-15 23:09:38 - Request method: DELETE
+2024-12-15 23:09:38 - Deleting media ID: 2
+2024-12-15 23:09:38 - Deleted file: /www/apache/domains/www.digireklaam.ee/htdocs/digiplayer/public/uploads/media/1734296882_jazz_Qkaart_nov24_1.mp4
+2024-12-15 23:09:38 - Media deleted successfully
+2024-12-15 23:09:38 - Request method: GET
+2024-12-15 23:09:38 - Fetched all media, count: 1
+2024-12-15 23:09:52 - Request method: POST
+2024-12-15 23:09:52 - Received POST request
+2024-12-15 23:09:52 - Received file: jazz_Qkaart_nov24_1.mp4, type: video/mp4
+2024-12-15 23:09:52 - File uploaded successfully. Type: video, Resolution: 
+2024-12-15 23:09:52 - Inserting into database - Name: jazz_Qkaart_nov24_1, Type: video, Path: /digiplayer/public/uploads/media/1734296992_jazz_Qkaart_nov24_1.mp4
+2024-12-15 23:09:52 - Media inserted successfully with ID: 3
+2024-12-15 23:09:52 - Request method: GET
+2024-12-15 23:09:52 - Fetched all media, count: 2
+2024-12-15 23:10:17 - Request method: POST
+2024-12-15 23:10:17 - Received POST request
+2024-12-15 23:10:17 - Received file: bodyfence_2.png, type: image/png
+2024-12-15 23:10:17 - File uploaded successfully. Type: image, Resolution: 900x557
+2024-12-15 23:10:17 - Inserting into database - Name: bodyfence_21111, Type: image, Path: /digiplayer/public/uploads/media/1734297017_bodyfence_2.png
+2024-12-15 23:10:17 - Media inserted successfully with ID: 4
+2024-12-15 23:10:17 - Request method: GET
+2024-12-15 23:10:17 - Fetched all media, count: 3
+2024-12-15 23:11:32 - Request method: GET
+2024-12-15 23:11:32 - Fetched all media, count: 3
+2024-12-15 23:11:32 - Request method: GET
+2024-12-15 23:11:32 - Fetched all media, count: 3
+2024-12-15 23:11:55 - Request method: GET
+2024-12-15 23:11:55 - Fetched all media, count: 3
+2024-12-15 23:16:43 - Request method: POST
+2024-12-15 23:16:43 - Received POST request
+2024-12-15 23:16:43 - Received file: bodyfence_2.png, type: image/png
+2024-12-15 23:16:43 - File uploaded successfully. Type: image, Resolution: 900x557
+2024-12-15 23:16:43 - Inserting into database - Name: bodyfence_2, Type: image, Path: /digiplayer/public/uploads/media/1734297403_bodyfence_2.png
+2024-12-15 23:16:43 - Media inserted successfully with ID: 5
+2024-12-15 23:16:43 - Request method: GET
+2024-12-15 23:16:43 - Fetched all media, count: 4
+2024-12-15 23:16:51 - Request method: POST
+2024-12-15 23:16:51 - Received POST request
+2024-12-15 23:16:51 - Received file: bodyfence_2.png, type: image/png
+2024-12-15 23:16:51 - File uploaded successfully. Type: image, Resolution: 900x557
+2024-12-15 23:16:51 - Inserting into database - Name: bodyfence_2, Type: image, Path: /digiplayer/public/uploads/media/1734297411_bodyfence_2.png
+2024-12-15 23:16:51 - Media inserted successfully with ID: 6
+2024-12-15 23:16:51 - Request method: GET
+2024-12-15 23:16:51 - Fetched all media, count: 5
+2024-12-15 23:19:07 - Request method: GET
+2024-12-15 23:19:07 - Fetched all media, count: 5
+2024-12-15 23:19:09 - Request method: GET
+2024-12-15 23:19:09 - Fetched all media, count: 5
+2024-12-15 23:21:13 - Request method: GET
+2024-12-15 23:21:13 - Fetched all media, count: 5
+2024-12-15 23:21:15 - Request method: GET
+2024-12-15 23:21:15 - Fetched all media, count: 5
+2024-12-15 23:21:16 - Request method: GET
+2024-12-15 23:21:16 - Fetched all media, count: 5
+2024-12-15 23:21:16 - Request method: GET
+2024-12-15 23:21:16 - Fetched all media, count: 5
+2024-12-15 23:21:17 - Request method: GET
+2024-12-15 23:21:17 - Fetched all media, count: 5
+2024-12-15 23:22:09 - Request method: GET
+2024-12-15 23:22:09 - Fetched all media, count: 5
+2024-12-15 23:39:48 - Request method: GET
+2024-12-15 23:39:48 - Fetched all media, count: 5
+2024-12-15 23:39:51 - Request method: GET
+2024-12-15 23:39:51 - Fetched all media, count: 5
+2024-12-16 01:01:04 - Request method: GET
+2024-12-16 01:01:04 - Fetched all media, count: 5
+2024-12-16 01:01:21 - Request method: GET
+2024-12-16 01:01:21 - Fetched all media, count: 5
+2024-12-16 09:44:06 - Request method: GET
+2024-12-16 09:44:06 - Fetched all media, count: 5
+2024-12-16 09:44:09 - Request method: GET
+2024-12-16 09:44:09 - Fetched all media, count: 5
+2024-12-16 09:44:10 - Request method: GET
+2024-12-16 09:44:10 - Fetched all media, count: 5
+2024-12-16 09:44:48 - Request method: GET
+2024-12-16 09:44:48 - Fetched all media, count: 5
+2024-12-16 09:45:43 - Request method: GET
+2024-12-16 09:45:43 - Fetched all media, count: 5
+2024-12-16 09:45:46 - Request method: GET
+2024-12-16 09:45:46 - Fetched all media, count: 5
+2024-12-16 10:27:55 - Request method: GET
+2024-12-16 10:27:55 - Fetched all media, count: 5
+2024-12-16 10:27:56 - Request method: GET
+2024-12-16 10:27:56 - Fetched all media, count: 5
+2024-12-16 10:28:17 - Request method: GET
+2024-12-16 10:28:17 - Fetched all media, count: 5
+2024-12-16 10:28:18 - Request method: GET
+2024-12-16 10:28:18 - Fetched all media, count: 5
+2024-12-16 10:28:20 - Request method: GET
+2024-12-16 10:28:20 - Fetched all media, count: 5
+2024-12-16 10:28:44 - Request method: GET
+2024-12-16 10:28:44 - Fetched all media, count: 5
+2024-12-16 10:28:45 - Request method: GET
+2024-12-16 10:28:45 - Fetched all media, count: 5
+2024-12-16 10:36:58 - Request method: GET
+2024-12-16 10:36:58 - Fetched all media, count: 5
+2024-12-16 10:37:03 - Request method: GET
+2024-12-16 10:37:03 - Fetched all media, count: 5
+2024-12-16 10:38:31 - Request method: GET
+2024-12-16 10:38:31 - Fetched all media, count: 5
+2024-12-16 10:39:44 - Request method: GET
+2024-12-16 10:39:44 - Fetched all media, count: 5
+2024-12-16 10:39:46 - Request method: GET
+2024-12-16 10:39:46 - Fetched all media, count: 5
+2024-12-16 10:44:09 - Request method: GET
+2024-12-16 10:44:09 - Fetched all media, count: 5
+2024-12-16 10:44:20 - Request method: POST
+2024-12-16 10:44:20 - Received POST request
+2024-12-16 10:44:20 - Received file: bodyfence_2.png, type: image/png
+2024-12-16 10:44:20 - File uploaded successfully. Type: image, Resolution: 900x557
+2024-12-16 10:44:20 - Inserting into database - Name: bodyfence_2, Type: image, Path: /digiplayer/public/uploads/media/1734338660_bodyfence_2.png
+2024-12-16 10:44:20 - Media inserted successfully with ID: 7
+2024-12-16 10:44:20 - Request method: GET
+2024-12-16 10:44:20 - Fetched all media, count: 6
+2024-12-16 10:44:57 - Request method: GET
+2024-12-16 10:44:57 - Fetched all media, count: 6
+2024-12-16 10:47:51 - Request method: GET
+2024-12-16 10:47:51 - Fetched all media, count: 6
+2024-12-16 10:54:48 - Request method: GET
+2024-12-16 10:54:48 - Fetched all media, count: 6
+2024-12-16 10:59:02 - Request method: GET
+2024-12-16 10:59:02 - Fetched all media, count: 6
+2024-12-16 10:59:09 - Request method: GET
+2024-12-16 10:59:09 - Fetched all media, count: 6
+2024-12-16 11:03:36 - Request method: GET
+2024-12-16 11:03:36 - Fetched all media, count: 6
+2024-12-16 11:04:04 - Request method: GET
+2024-12-16 11:04:04 - Fetched all media, count: 6
+2024-12-16 11:04:05 - Request method: GET
+2024-12-16 11:04:05 - Fetched all media, count: 6
+2024-12-16 11:04:16 - Request method: GET
+2024-12-16 11:04:16 - Fetched all media, count: 6
+2024-12-16 11:04:17 - Request method: GET
+2024-12-16 11:04:17 - Fetched all media, count: 6
+2024-12-16 11:04:18 - Request method: GET
+2024-12-16 11:04:18 - Fetched all media, count: 6
+2024-12-16 11:05:33 - Request method: GET
+2024-12-16 11:05:33 - Fetched all media, count: 6
+2024-12-16 13:07:37 - Request method: GET
+2024-12-16 13:07:37 - Fetched all media, count: 6
+2024-12-16 13:11:28 - Request method: GET
+2024-12-16 13:11:28 - Fetched all media, count: 6
+2024-12-16 13:11:36 - Request method: GET
+2024-12-16 13:11:36 - Fetched all media, count: 6
+2024-12-16 14:23:01 - Request method: GET
+2024-12-16 14:23:01 - Fetched all media, count: 6
+2024-12-16 14:23:02 - Request method: GET
+2024-12-16 14:23:02 - Fetched all media, count: 6
+2024-12-16 14:23:57 - Request method: GET
+2024-12-16 14:23:57 - Fetched all media, count: 6
+2024-12-16 14:24:14 - Request method: GET
+2024-12-16 14:24:14 - Fetched all media, count: 6
+2024-12-16 14:25:08 - Request method: GET
+2024-12-16 14:25:08 - Fetched all media, count: 6
+2024-12-16 14:25:17 - Request method: GET
+2024-12-16 14:25:17 - Fetched all media, count: 6
+2024-12-16 14:29:59 - Request method: GET
+2024-12-16 14:29:59 - Fetched all media, count: 6
+2024-12-16 14:32:09 - Request method: GET
+2024-12-16 14:32:09 - Fetched all media, count: 6
+2024-12-16 14:32:40 - Request method: GET
+2024-12-16 14:32:40 - Fetched all media, count: 6
+2024-12-16 14:32:51 - Request method: GET
+2024-12-16 14:32:51 - Fetched all media, count: 6
+2024-12-16 14:32:52 - Request method: GET
+2024-12-16 14:32:52 - Fetched all media, count: 6
+2024-12-16 14:33:05 - Request method: GET
+2024-12-16 14:33:05 - Fetched all media, count: 6
+2024-12-16 14:33:13 - Request method: GET
+2024-12-16 14:33:13 - Fetched all media, count: 6
+2024-12-16 14:33:14 - Request method: GET
+2024-12-16 14:33:14 - Fetched all media, count: 6
+2024-12-16 14:33:26 - Request method: GET
+2024-12-16 14:33:26 - Fetched all media, count: 6
+2024-12-16 14:33:27 - Request method: GET
+2024-12-16 14:33:27 - Fetched all media, count: 6
+2024-12-16 14:33:35 - Request method: GET
+2024-12-16 14:33:35 - Fetched all media, count: 6
+2024-12-16 14:33:35 - Request method: GET
+2024-12-16 14:33:35 - Fetched all media, count: 6
+2024-12-16 14:33:38 - Request method: GET
+2024-12-16 14:33:38 - Fetched all media, count: 6
+2024-12-16 14:35:50 - Request method: GET
+2024-12-16 14:35:50 - Fetched all media, count: 6
+2024-12-16 16:36:25 - Request method: GET
+2024-12-16 16:36:25 - Fetched all media, count: 6
+2024-12-16 16:41:59 - Request method: GET
+2024-12-16 16:41:59 - Fetched all media, count: 6
+2024-12-16 16:42:01 - Request method: GET
+2024-12-16 16:42:01 - Fetched all media, count: 6
+2024-12-16 16:42:01 - Request method: GET
+2024-12-16 16:42:01 - Fetched all media, count: 6
+2024-12-16 16:42:43 - Request method: GET
+2024-12-16 16:42:43 - Fetched all media, count: 6
+2024-12-16 16:42:44 - Request method: GET
+2024-12-16 16:42:44 - Fetched all media, count: 6
+2024-12-16 16:42:45 - Request method: GET
+2024-12-16 16:42:45 - Fetched all media, count: 6
+2024-12-16 16:42:52 - Request method: GET
+2024-12-16 16:42:52 - Fetched all media, count: 6
+2024-12-16 16:43:47 - Request method: GET
+2024-12-16 16:43:47 - Fetched all media, count: 6
+2024-12-16 16:48:44 - Request method: GET
+2024-12-16 16:48:44 - Fetched all media, count: 6
+2024-12-16 16:50:17 - Request method: GET
+2024-12-16 16:50:17 - Fetched all media, count: 6
+2024-12-16 16:50:19 - Request method: GET
+2024-12-16 16:50:19 - Fetched all media, count: 6
+2024-12-16 16:51:14 - Request method: GET
+2024-12-16 16:51:14 - Fetched all media, count: 6
+2024-12-16 16:52:52 - Request method: GET
+2024-12-16 16:52:52 - Fetched all media, count: 6
+2024-12-16 16:53:21 - Request method: GET
+2024-12-16 16:53:21 - Fetched all media, count: 6

@@ -1,0 +1,584 @@
+2024-12-13 11:54:28 - GET request received
+2024-12-13 11:54:36 - POST request received
+2024-12-13 11:54:36 - POST data: {"name":"Test Playlist","description":"Test Description"}
+2024-12-13 11:59:46 - GET request received
+2024-12-13 12:08:42 - Items request started
+2024-12-13 12:08:42 - Playlist ID: 1
+2024-12-13 12:08:48 - Items request started
+2024-12-13 12:08:48 - Playlist ID: 1
+2024-12-13 12:14:13 - GET request received
+2024-12-13 12:14:26 - GET request received
+2024-12-13 12:17:22 - GET request received: []
+2024-12-13 12:17:22 - DB Connected
+2024-12-13 12:17:22 - Getting all playlists
+2024-12-13 12:17:22 - GET request received: {"id":"1","items":"1"}
+2024-12-13 12:17:22 - DB Connected
+2024-12-13 12:17:22 - Getting items for playlist: 1
+2024-12-13 12:17:22 - Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'm.name' in 'SELECT'
+2024-12-13 12:20:59 - GET request received: []
+2024-12-13 12:20:59 - DB Connected
+2024-12-13 12:20:59 - Getting all playlists
+2024-12-13 12:21:09 - GET request received: {"id":"1","items":"1"}
+2024-12-13 12:21:09 - DB Connected
+2024-12-13 12:21:09 - Getting items for playlist: 1
+2024-12-13 12:21:09 - Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'm.name' in 'SELECT'
+2024-12-13 12:22:37 - GET request received: {"id":"1","items":"1"}
+2024-12-13 12:24:21 - GET request received: {"id":"1","items":"1"}
+2024-12-13 15:15:33 - GET request received: {"id":"1","items":"1"}
+2024-12-13 15:20:26 - GET request received
+2024-12-13 15:20:37 - POST request received
+2024-12-13 15:20:37 - POST data: {"name":"Test Playlist 2","description":"Test Description"}
+2024-12-13 15:24:57 - GET request received
+2024-12-13 15:27:22 - GET request received
+2024-12-13 15:34:12 - POST request received
+2024-12-13 15:34:12 - POST data: {"name":"Test Playlist 3","description":"Test Description"}
+2024-12-13 15:35:07 - GET request received
+2024-12-13 21:13:43 - GET request received
+2024-12-13 21:13:54 - DELETE request received
+2024-12-13 21:13:54 - DELETE data: null
+2024-12-13 21:13:54 - GET request received
+2024-12-13 22:33:43 - GET request received
+2024-12-13 22:33:46 - DELETE request received
+2024-12-13 22:33:46 - DELETE data: null
+2024-12-13 22:33:46 - GET request received
+2024-12-13 22:34:06 - GET request received
+2024-12-13 22:34:22 - GET request received
+2024-12-13 22:34:22 - GET request received
+2024-12-13 22:34:25 - GET request received
+2024-12-13 22:39:36 - GET request received
+2024-12-13 22:39:37 - GET request received
+2024-12-13 22:39:40 - GET request received
+2024-12-14 01:25:45 - GET request
+2024-12-14 01:25:46 - GET request
+2024-12-14 01:25:50 - GET request
+2024-12-14 01:25:50 - GET request
+2024-12-14 01:25:53 - DELETE request
+2024-12-14 01:25:53 - GET request
+2024-12-14 01:25:56 - DELETE request
+2024-12-14 01:25:56 - GET request
+2024-12-14 01:26:02 - GET request
+2024-12-14 01:26:02 - GET request
+2024-12-14 01:26:06 - GET request
+2024-12-14 01:26:06 - GET request
+2024-12-14 01:26:12 - GET request
+2024-12-14 01:27:14 - DELETE request
+2024-12-14 01:27:14 - GET request
+2024-12-14 01:28:25 - GET request
+2024-12-14 01:28:48 - GET request
+2024-12-14 01:28:52 - GET request
+2024-12-14 01:28:52 - GET request
+2024-12-14 01:28:57 - GET request
+2024-12-14 01:29:27 - GET request
+2024-12-14 01:29:28 - GET request
+2024-12-14 01:29:33 - GET request
+2024-12-14 01:29:33 - GET request
+2024-12-14 01:31:13 - GET request
+2024-12-14 01:31:17 - GET request
+2024-12-14 01:31:17 - GET request
+2024-12-14 01:31:23 - DELETE request
+2024-12-14 01:31:23 - GET request
+2024-12-14 01:31:35 - GET request
+2024-12-14 01:34:44 - GET request
+2024-12-14 01:34:47 - DELETE request
+2024-12-14 01:34:47 - GET request
+2024-12-14 01:34:59 - GET request
+2024-12-14 01:34:59 - GET request
+2024-12-14 01:35:21 - GET request
+2024-12-14 01:35:25 - DELETE request
+2024-12-14 01:35:25 - GET request
+2024-12-14 01:35:28 - GET request
+2024-12-14 01:35:28 - GET request
+2024-12-14 01:37:20 - GET request
+2024-12-14 01:37:32 - DELETE request
+2024-12-14 01:37:32 - GET request
+2024-12-14 01:37:51 - GET request
+2024-12-14 01:37:51 - GET request
+2024-12-14 01:38:31 - GET request
+2024-12-14 01:38:31 - GET request
+2024-12-14 01:44:07 - GET request
+2024-12-14 01:44:08 - GET request
+2024-12-14 01:44:12 - DELETE request
+2024-12-14 01:44:12 - GET request
+2024-12-14 01:44:15 - GET request
+2024-12-14 01:44:15 - GET request
+2024-12-14 01:44:21 - DELETE request
+2024-12-14 01:44:21 - GET request
+2024-12-14 01:44:29 - GET request
+2024-12-14 01:44:29 - GET request
+2024-12-14 12:42:15 - GET request
+2024-12-14 12:42:26 - GET request
+2024-12-14 12:42:26 - GET request
+2024-12-14 12:42:27 - GET request
+2024-12-14 12:42:27 - GET request
+2024-12-14 13:25:34 - GET request
+2024-12-14 13:25:37 - DELETE request
+2024-12-14 13:25:37 - GET request
+2024-12-14 13:25:51 - DELETE request
+2024-12-14 13:25:51 - GET request
+2024-12-14 13:25:55 - DELETE request
+2024-12-14 13:25:55 - GET request
+2024-12-14 13:26:03 - DELETE request
+2024-12-14 13:26:03 - GET request
+2024-12-14 16:53:26 - GET request
+2024-12-14 16:53:43 - GET request
+2024-12-14 16:53:43 - GET request
+2024-12-14 16:54:31 - GET request
+2024-12-14 16:54:31 - GET request
+2024-12-14 18:47:25 - Request method: GET
+2024-12-14 18:47:25 - Sent playlists data: 3 items
+2024-12-14 18:47:32 - Request method: POST
+2024-12-14 18:47:32 - Received POST data: {"name":"sss","description":"sss"}
+2024-12-14 18:47:32 - Playlist created with ID: 5
+2024-12-14 18:47:32 - Request method: GET
+2024-12-14 18:47:32 - Sent playlists data: 4 items
+2024-12-14 18:47:51 - Request method: POST
+2024-12-14 18:47:51 - Received POST data: {"name":"dddd","description":"ddd"}
+2024-12-14 18:47:51 - Playlist created with ID: 6
+2024-12-14 18:47:51 - Request method: GET
+2024-12-14 18:47:51 - Sent playlists data: 5 items
+2024-12-14 18:51:21 - Request method: GET
+2024-12-14 18:51:21 - Sent playlists data: 5 items
+2024-12-14 18:51:24 - Request method: GET
+2024-12-14 18:51:24 - Sent playlists data: 5 items
+2024-12-14 18:51:32 - Request method: POST
+2024-12-14 18:51:32 - Received POST data: {"name":"ddd12","description":"ddd12"}
+2024-12-14 18:51:32 - Playlist created with ID: 7
+2024-12-14 18:51:32 - Request method: GET
+2024-12-14 18:51:32 - Sent playlists data: 6 items
+2024-12-14 18:51:35 - Request method: GET
+2024-12-14 18:51:35 - Sent playlists data: 6 items
+2024-12-14 18:51:45 - Request method: DELETE
+2024-12-14 18:51:45 - Request method: GET
+2024-12-14 18:51:45 - Sent playlists data: 6 items
+2024-12-14 18:51:48 - Request method: DELETE
+2024-12-14 18:51:48 - Request method: GET
+2024-12-14 18:51:48 - Sent playlists data: 6 items
+2024-12-14 18:51:51 - Request method: DELETE
+2024-12-14 18:51:51 - Request method: GET
+2024-12-14 18:51:51 - Sent playlists data: 6 items
+2024-12-14 18:51:55 - Request method: DELETE
+2024-12-14 18:51:55 - Request method: GET
+2024-12-14 18:51:55 - Sent playlists data: 6 items
+2024-12-14 18:53:37 - Request method: GET
+2024-12-14 18:53:37 - Sent playlists data: 6 items
+2024-12-14 18:53:41 - Request method: DELETE
+2024-12-14 18:53:41 - Playlist deleted: 7
+2024-12-14 18:53:41 - Request method: GET
+2024-12-14 18:53:41 - Sent playlists data: 5 items
+2024-12-14 18:53:45 - Request method: DELETE
+2024-12-14 18:53:45 - Playlist deleted: 6
+2024-12-14 18:53:45 - Request method: GET
+2024-12-14 18:53:45 - Sent playlists data: 4 items
+2024-12-14 18:53:53 - Request method: DELETE
+2024-12-14 18:53:53 - Playlist deleted: 5
+2024-12-14 18:53:53 - Request method: GET
+2024-12-14 18:53:53 - Sent playlists data: 3 items
+2024-12-14 18:53:57 - Request method: DELETE
+2024-12-14 18:53:57 - Playlist deleted: 2
+2024-12-14 18:53:57 - Request method: GET
+2024-12-14 18:53:57 - Sent playlists data: 2 items
+2024-12-14 18:56:11 - Request method: GET
+2024-12-14 18:56:11 - Sent playlists data: 2 items
+2024-12-14 18:56:13 - Request method: GET
+2024-12-14 18:56:13 - Sent playlists data: 2 items
+2024-12-14 18:56:20 - Request method: POST
+2024-12-14 18:56:20 - Received POST data: {"name":"ss23232","description":"23232"}
+2024-12-14 18:56:20 - Playlist created with ID: 8
+2024-12-14 18:56:20 - Request method: GET
+2024-12-14 18:56:20 - Sent playlists data: 3 items
+2024-12-14 18:56:23 - Request method: GET
+2024-12-14 18:56:23 - Fetched playlist id: 8
+2024-12-14 18:56:28 - Request method: PUT
+2024-12-14 18:56:29 - Request method: PUT
+2024-12-14 18:56:33 - Request method: DELETE
+2024-12-14 18:56:33 - Playlist deleted: 8
+2024-12-14 18:56:33 - Request method: GET
+2024-12-14 18:56:33 - Sent playlists data: 2 items
+2024-12-14 18:57:48 - Request method: GET
+2024-12-14 18:57:48 - Fetched playlist id: 3
+2024-12-14 18:58:21 - Request method: PUT
+2024-12-14 18:59:37 - Request method: GET
+2024-12-14 18:59:37 - Sent playlists data: 2 items
+2024-12-14 19:14:34 - Request method: GET
+2024-12-14 19:14:34 - Sent playlists data: 2 items
+2024-12-14 19:14:41 - Request method: GET
+2024-12-14 19:14:41 - Sent playlists data: 2 items
+2024-12-14 19:14:41 - Request method: GET
+2024-12-14 19:14:41 - Sent playlists data: 2 items
+2024-12-14 19:14:43 - Request method: GET
+2024-12-14 19:14:43 - Sent playlists data: 2 items
+2024-12-14 19:14:53 - Request method: GET
+2024-12-14 19:14:53 - Sent playlists data: 2 items
+2024-12-14 19:14:58 - Request method: GET
+2024-12-14 19:14:58 - Sent playlists data: 2 items
+2024-12-14 19:16:32 - Request method: GET
+2024-12-14 19:16:32 - Sent playlists data: 2 items
+2024-12-14 19:16:38 - Request method: POST
+2024-12-14 19:16:38 - Received POST data: {"name":"eee","description":"eee"}
+2024-12-14 19:16:38 - Playlist created with ID: 9
+2024-12-14 19:16:38 - Request method: GET
+2024-12-14 19:16:38 - Sent playlists data: 3 items
+2024-12-14 19:16:44 - Request method: DELETE
+2024-12-14 19:16:44 - Playlist deleted: 9
+2024-12-14 19:16:44 - Request method: GET
+2024-12-14 19:16:44 - Sent playlists data: 2 items
+2024-12-14 19:17:37 - Request method: GET
+2024-12-14 19:17:37 - Sent playlists data: 2 items
+2024-12-14 19:17:43 - Request method: POST
+2024-12-14 19:17:43 - Received POST data: {"name":"dd","description":"dd"}
+2024-12-14 19:17:43 - Playlist created with ID: 10
+2024-12-14 19:17:43 - Request method: GET
+2024-12-14 19:17:43 - Sent playlists data: 3 items
+2024-12-14 19:17:52 - Request method: DELETE
+2024-12-14 19:17:52 - Playlist deleted: 10
+2024-12-14 19:17:52 - Request method: GET
+2024-12-14 19:17:52 - Sent playlists data: 2 items
+2024-12-14 19:19:29 - Request method: GET
+2024-12-14 19:19:29 - Sent playlists data: 2 items
+2024-12-14 19:19:38 - Request method: POST
+2024-12-14 19:19:38 - Received POST data: {"name":"ddd","description":"dd","media_items":[]}
+2024-12-14 19:19:38 - Playlist created with ID: 11
+2024-12-14 19:19:38 - Request method: GET
+2024-12-14 19:19:38 - Sent playlists data: 3 items
+2024-12-14 19:19:42 - Request method: DELETE
+2024-12-14 19:19:42 - Playlist deleted: 11
+2024-12-14 19:19:42 - Request method: GET
+2024-12-14 19:19:42 - Sent playlists data: 2 items
+2024-12-15 10:45:07 - Duplicating playlist ID: 23
+2024-12-15 10:45:07 - Created duplicate playlist with ID: 24
+2024-12-15 10:45:08 - Duplicating playlist ID: 24
+2024-12-15 10:45:08 - Created duplicate playlist with ID: 25
+2024-12-15 10:45:11 - Duplicating playlist ID: 25
+2024-12-15 10:45:11 - Created duplicate playlist with ID: 26
+2024-12-15 23:20:58 - Request method: GET
+2024-12-15 23:20:58 - Fetched all playlists: 4
+2024-12-15 23:21:00 - Request method: GET
+2024-12-15 23:21:00 - Fetched all playlists: 4
+2024-12-15 23:21:00 - Request method: GET
+2024-12-15 23:21:00 - Fetched all playlists: 4
+2024-12-15 23:21:03 - Request method: POST
+2024-12-15 23:21:03 - Received POST data: {"duplicate":27}
+2024-12-15 23:21:03 - Duplicated playlist ID 27
+2024-12-15 23:21:03 - Request method: GET
+2024-12-15 23:21:03 - Fetched all playlists: 5
+2024-12-15 23:21:10 - Request method: POST
+2024-12-15 23:21:10 - Received POST data: {"name":"aaa","description":"aaa"}
+2024-12-15 23:21:10 - Created new playlist
+2024-12-15 23:21:10 - Request method: GET
+2024-12-15 23:21:10 - Fetched all playlists: 6
+2024-12-16 01:01:06 - Request method: GET
+2024-12-16 01:01:06 - Fetched all playlists: 6
+2024-12-16 01:01:24 - Request method: GET
+2024-12-16 01:01:24 - Fetched all playlists: 6
+2024-12-16 09:44:34 - Request method: GET
+2024-12-16 09:44:34 - Fetched all playlists: 6
+2024-12-16 09:44:38 - Request method: POST
+2024-12-16 09:44:38 - Received POST data: {"name":"ss","description":"ss"}
+2024-12-16 09:44:38 - Created new playlist
+2024-12-16 09:44:38 - Request method: GET
+2024-12-16 09:44:38 - Fetched all playlists: 7
+2024-12-16 09:44:41 - Request method: DELETE
+2024-12-16 09:44:41 - Deleting playlist: 20
+2024-12-16 09:44:41 - Request method: GET
+2024-12-16 09:44:41 - Fetched all playlists: 6
+2024-12-16 09:44:42 - Request method: POST
+2024-12-16 09:44:42 - Received POST data: {"duplicate":22}
+2024-12-16 09:44:42 - Duplicated playlist ID 22
+2024-12-16 09:44:42 - Request method: GET
+2024-12-16 09:44:42 - Fetched all playlists: 7
+2024-12-16 09:44:44 - Request method: DELETE
+2024-12-16 09:44:44 - Deleting playlist: 22
+2024-12-16 09:44:44 - Request method: GET
+2024-12-16 09:44:44 - Fetched all playlists: 6
+2024-12-16 09:44:47 - Request method: DELETE
+2024-12-16 09:44:47 - Deleting playlist: 25
+2024-12-16 09:44:47 - Request method: GET
+2024-12-16 09:44:47 - Fetched all playlists: 5
+2024-12-16 10:28:05 - Request method: GET
+2024-12-16 10:28:05 - Fetched all playlists: 5
+2024-12-16 10:28:09 - Request method: GET
+2024-12-16 10:28:09 - Fetched all playlists: 5
+2024-12-16 10:28:16 - Request method: GET
+2024-12-16 10:28:16 - Fetched all playlists: 5
+2024-12-16 10:29:45 - Request method: GET
+2024-12-16 10:29:45 - Fetched all playlists: 5
+2024-12-16 10:36:57 - Request method: GET
+2024-12-16 10:36:57 - Fetched all playlists: 5
+2024-12-16 10:36:59 - Request method: GET
+2024-12-16 10:36:59 - Fetched all playlists: 5
+2024-12-16 10:37:02 - Request method: GET
+2024-12-16 10:37:02 - Fetched all playlists: 5
+2024-12-16 10:38:30 - Request method: GET
+2024-12-16 10:38:30 - Fetched all playlists: 5
+2024-12-16 10:38:33 - Request method: GET
+2024-12-16 10:38:33 - Fetched all playlists: 5
+2024-12-16 10:38:57 - Request method: GET
+2024-12-16 10:38:57 - Fetched all playlists: 5
+2024-12-16 10:38:58 - Request method: GET
+2024-12-16 10:38:58 - Fetched all playlists: 5
+2024-12-16 10:39:31 - Request method: GET
+2024-12-16 10:39:31 - Fetched all playlists: 5
+2024-12-16 10:45:02 - Request method: GET
+2024-12-16 10:45:02 - Fetched all playlists: 5
+2024-12-16 10:45:03 - Request method: GET
+2024-12-16 10:45:03 - Fetched all playlists: 5
+2024-12-16 10:45:04 - Request method: GET
+2024-12-16 10:45:04 - Fetched all playlists: 5
+2024-12-16 10:45:09 - Request method: GET
+2024-12-16 10:45:09 - Fetched all playlists: 5
+2024-12-16 10:45:11 - Request method: POST
+2024-12-16 10:45:11 - Received POST data: {"duplicate":31}
+2024-12-16 10:45:11 - Duplicated playlist ID 31
+2024-12-16 10:45:11 - Request method: GET
+2024-12-16 10:45:11 - Fetched all playlists: 6
+2024-12-16 10:45:14 - Request method: DELETE
+2024-12-16 10:45:14 - Deleting playlist: 32
+2024-12-16 10:45:14 - Request method: GET
+2024-12-16 10:45:14 - Fetched all playlists: 5
+2024-12-16 10:45:16 - Request method: GET
+2024-12-16 10:45:16 - Fetched single playlist
+2024-12-16 10:45:18 - Request method: PUT
+2024-12-16 10:45:20 - Request method: PUT
+2024-12-16 10:45:26 - Request method: GET
+2024-12-16 10:45:26 - Fetched single playlist
+2024-12-16 10:45:28 - Request method: PUT
+2024-12-16 10:47:47 - Request method: GET
+2024-12-16 10:47:47 - Fetched all playlists: 5
+2024-12-16 10:47:49 - Request method: GET
+2024-12-16 10:47:49 - Fetched all playlists: 5
+2024-12-16 10:49:24 - Request method: GET
+2024-12-16 10:49:24 - Fetched all playlists: 5
+2024-12-16 10:54:39 - Request method: GET
+2024-12-16 10:54:39 - Fetched all playlists: 5
+2024-12-16 10:54:40 - Request method: GET
+2024-12-16 10:54:40 - Fetched single playlist
+2024-12-16 10:54:44 - Request method: PUT
+2024-12-16 10:54:45 - Request method: PUT
+2024-12-16 10:59:08 - Request method: GET
+2024-12-16 10:59:08 - Fetched all playlists: 5
+2024-12-16 10:59:10 - Request method: GET
+2024-12-16 10:59:10 - Fetched all playlists: 5
+2024-12-16 13:07:36 - Request method: GET
+2024-12-16 13:07:36 - Fetched all playlists: 5
+2024-12-16 13:07:39 - Request method: GET
+2024-12-16 13:07:39 - Fetched all playlists: 5
+2024-12-16 13:07:50 - Request method: GET
+2024-12-16 13:07:50 - Fetched all playlists: 5
+2024-12-16 13:10:10 - Request method: GET
+2024-12-16 13:10:10 - Fetched all playlists: 5
+2024-12-16 13:10:13 - Request method: GET
+2024-12-16 13:10:13 - Fetched all playlists: 5
+2024-12-16 13:10:14 - Request method: GET
+2024-12-16 13:10:14 - Fetched all playlists: 5
+2024-12-16 14:21:54 - Request method: GET
+2024-12-16 14:21:54 - Fetched all playlists: 5
+2024-12-16 14:22:55 - Request method: GET
+2024-12-16 14:22:55 - Fetched all playlists: 5
+2024-12-16 14:22:56 - Request method: GET
+2024-12-16 14:22:56 - Fetched all playlists: 5
+2024-12-16 14:23:09 - Request method: GET
+2024-12-16 14:23:09 - Fetched all playlists: 5
+2024-12-16 14:23:33 - Request method: GET
+2024-12-16 14:23:33 - Fetched all playlists: 5
+2024-12-16 14:23:35 - Request method: GET
+2024-12-16 14:23:35 - Fetched all playlists: 5
+2024-12-16 14:23:37 - Request method: GET
+2024-12-16 14:23:37 - Fetched single playlist
+2024-12-16 14:23:41 - Request method: PUT
+2024-12-16 14:23:42 - Request method: PUT
+2024-12-16 14:23:44 - Request method: PUT
+2024-12-16 14:23:46 - Request method: POST
+2024-12-16 14:23:46 - Received POST data: {"duplicate":30}
+2024-12-16 14:23:46 - Duplicated playlist ID 30
+2024-12-16 14:23:46 - Request method: GET
+2024-12-16 14:23:46 - Fetched all playlists: 6
+2024-12-16 14:23:49 - Request method: DELETE
+2024-12-16 14:23:49 - Deleting playlist: 31
+2024-12-16 14:23:49 - Request method: GET
+2024-12-16 14:23:49 - Fetched all playlists: 5
+2024-12-16 14:24:18 - Request method: GET
+2024-12-16 14:24:18 - Fetched all playlists: 5
+2024-12-16 14:24:20 - Request method: GET
+2024-12-16 14:24:20 - Fetched all playlists: 5
+2024-12-16 14:25:07 - Request method: GET
+2024-12-16 14:25:07 - Fetched all playlists: 5
+2024-12-16 14:25:14 - Request method: GET
+2024-12-16 14:25:14 - Fetched all playlists: 5
+2024-12-16 14:26:38 - Request method: GET
+2024-12-16 14:26:38 - Fetched all playlists: 5
+2024-12-16 14:27:47 - Request method: GET
+2024-12-16 14:27:47 - Fetched all playlists: 5
+2024-12-16 14:29:01 - Request method: GET
+2024-12-16 14:29:01 - Fetched all playlists: 5
+2024-12-16 14:29:02 - Request method: GET
+2024-12-16 14:29:02 - Fetched all playlists: 5
+2024-12-16 14:29:56 - Request method: GET
+2024-12-16 14:29:56 - Fetched all playlists: 5
+2024-12-16 14:29:58 - Request method: GET
+2024-12-16 14:29:58 - Fetched all playlists: 5
+2024-12-16 14:32:08 - Request method: GET
+2024-12-16 14:32:08 - Fetched all playlists: 5
+2024-12-16 14:32:11 - Request method: GET
+2024-12-16 14:32:11 - Fetched all playlists: 5
+2024-12-16 14:32:38 - Request method: GET
+2024-12-16 14:32:38 - Fetched all playlists: 5
+2024-12-16 14:33:37 - Request method: GET
+2024-12-16 14:33:37 - Fetched all playlists: 5
+2024-12-16 14:33:38 - Request method: GET
+2024-12-16 14:33:38 - Fetched all playlists: 5
+2024-12-16 14:33:48 - Request method: GET
+2024-12-16 14:33:48 - Fetched all playlists: 5
+2024-12-16 14:33:49 - Request method: GET
+2024-12-16 14:33:49 - Fetched all playlists: 5
+2024-12-16 14:33:59 - Request method: GET
+2024-12-16 14:33:59 - Fetched all playlists: 5
+2024-12-16 14:34:07 - Request method: GET
+2024-12-16 14:34:07 - Fetched all playlists: 5
+2024-12-16 14:34:08 - Request method: GET
+2024-12-16 14:34:08 - Fetched all playlists: 5
+2024-12-16 14:34:17 - Request method: GET
+2024-12-16 14:34:17 - Fetched all playlists: 5
+2024-12-16 14:34:18 - Request method: GET
+2024-12-16 14:34:18 - Fetched all playlists: 5
+2024-12-16 14:34:19 - Request method: GET
+2024-12-16 14:34:19 - Fetched all playlists: 5
+2024-12-16 14:34:39 - Request method: GET
+2024-12-16 14:34:39 - Fetched all playlists: 5
+2024-12-16 14:34:40 - Request method: GET
+2024-12-16 14:34:40 - Fetched all playlists: 5
+2024-12-16 14:34:48 - Request method: GET
+2024-12-16 14:34:48 - Fetched all playlists: 5
+2024-12-16 14:34:49 - Request method: GET
+2024-12-16 14:34:49 - Fetched all playlists: 5
+2024-12-16 14:34:58 - Request method: GET
+2024-12-16 14:34:58 - Fetched all playlists: 5
+2024-12-16 14:35:06 - Request method: GET
+2024-12-16 14:35:06 - Fetched all playlists: 5
+2024-12-16 14:35:18 - Request method: GET
+2024-12-16 14:35:18 - Fetched all playlists: 5
+2024-12-16 14:35:19 - Request method: GET
+2024-12-16 14:35:19 - Fetched all playlists: 5
+2024-12-16 14:35:27 - Request method: GET
+2024-12-16 14:35:27 - Fetched all playlists: 5
+2024-12-16 14:35:29 - Request method: GET
+2024-12-16 14:35:29 - Fetched all playlists: 5
+2024-12-16 14:35:38 - Request method: GET
+2024-12-16 14:35:38 - Fetched all playlists: 5
+2024-12-16 14:35:38 - Request method: GET
+2024-12-16 14:35:38 - Fetched all playlists: 5
+2024-12-16 14:35:47 - Request method: GET
+2024-12-16 14:35:47 - Fetched all playlists: 5
+2024-12-16 14:35:48 - Request method: GET
+2024-12-16 14:35:48 - Fetched all playlists: 5
+2024-12-16 14:35:53 - Request method: GET
+2024-12-16 14:35:53 - Fetched all playlists: 5
+2024-12-16 14:36:02 - Request method: GET
+2024-12-16 14:36:02 - Fetched all playlists: 5
+2024-12-16 14:36:03 - Request method: GET
+2024-12-16 14:36:03 - Fetched all playlists: 5
+2024-12-16 16:36:24 - Request method: GET
+2024-12-16 16:36:24 - Fetched all playlists: 5
+2024-12-16 16:36:27 - Request method: GET
+2024-12-16 16:36:27 - Fetched all playlists: 5
+2024-12-16 16:40:38 - Request method: GET
+2024-12-16 16:40:38 - Fetched all playlists: 5
+2024-12-16 16:40:39 - Request method: GET
+2024-12-16 16:40:39 - Fetched all playlists: 5
+2024-12-16 16:40:40 - Request method: GET
+2024-12-16 16:40:40 - Fetched all playlists: 5
+2024-12-16 16:40:41 - Request method: GET
+2024-12-16 16:40:41 - Fetched all playlists: 5
+2024-12-16 16:41:57 - Request method: GET
+2024-12-16 16:41:57 - Fetched all playlists: 5
+2024-12-16 16:42:53 - Request method: GET
+2024-12-16 16:42:53 - Fetched all playlists: 5
+2024-12-16 16:43:50 - Request method: GET
+2024-12-16 16:43:50 - Fetched all playlists: 5
+2024-12-16 16:44:05 - Request method: GET
+2024-12-16 16:44:05 - Fetched all playlists: 5
+2024-12-16 16:44:13 - Request method: GET
+2024-12-16 16:44:13 - Fetched all playlists: 5
+2024-12-16 16:47:06 - Request method: GET
+2024-12-16 16:47:06 - Fetched all playlists: 5
+2024-12-16 16:47:07 - Request method: GET
+2024-12-16 16:47:07 - Fetched all playlists: 5
+2024-12-16 16:47:24 - Request method: GET
+2024-12-16 16:47:24 - Fetched all playlists: 5
+2024-12-16 16:48:43 - Request method: GET
+2024-12-16 16:48:43 - Fetched all playlists: 5
+2024-12-16 16:50:10 - Request method: GET
+2024-12-16 16:50:10 - Fetched all playlists: 5
+2024-12-16 16:50:11 - Request method: GET
+2024-12-16 16:50:11 - Fetched all playlists: 5
+2024-12-16 16:50:15 - Request method: GET
+2024-12-16 16:50:15 - Fetched all playlists: 5
+2024-12-16 16:50:17 - Request method: GET
+2024-12-16 16:50:17 - Fetched all playlists: 5
+2024-12-16 16:51:15 - Request method: GET
+2024-12-16 16:51:15 - Fetched all playlists: 5
+2024-12-16 16:51:17 - Request method: GET
+2024-12-16 16:51:17 - Fetched all playlists: 5
+2024-12-16 16:52:54 - Request method: GET
+2024-12-16 16:52:54 - Fetched all playlists: 5
+2024-12-16 16:53:20 - Request method: GET
+2024-12-16 16:53:20 - Fetched all playlists: 5
+2024-12-16 16:53:21 - Request method: GET
+2024-12-16 16:53:21 - Fetched all playlists: 5
+2024-12-16 16:53:23 - Request method: GET
+2024-12-16 16:53:23 - Fetched all playlists: 5
+2024-12-16 16:53:40 - Request method: GET
+2024-12-16 16:53:40 - Fetched all playlists: 5
+2024-12-16 20:20:17 - Request method: GET
+2024-12-16 20:20:17 - Fetched playlists: 5
+2024-12-16 20:20:18 - Request method: GET
+2024-12-16 20:20:18 - Fetched playlists: 5
+2024-12-16 20:20:23 - Request method: POST
+2024-12-16 20:20:23 - Received POST data: {"name":"sss","description":"ss"}
+2024-12-16 20:20:23 - Created new playlist with ID: 34
+2024-12-16 20:20:23 - Request method: GET
+2024-12-16 20:20:23 - Fetched playlists: 6
+2024-12-16 20:22:16 - Request method: GET
+2024-12-16 20:22:16 - Fetched playlists: 6
+2024-12-16 20:22:18 - Request method: GET
+2024-12-16 20:22:18 - Fetched playlists: 6
+2024-12-16 20:22:20 - Request method: POST
+2024-12-16 20:22:20 - Received POST data: {"name":"undefined","description":"sss"}
+2024-12-16 20:22:20 - Created new playlist with ID: 35
+2024-12-16 20:22:20 - Request method: GET
+2024-12-16 20:22:20 - Fetched playlists: 7
+2024-12-16 20:22:25 - Request method: DELETE
+2024-12-16 20:22:25 - Error: Invalid request method
+2024-12-16 20:22:25 - Request method: GET
+2024-12-16 20:22:25 - Fetched playlists: 7
+2024-12-16 20:22:28 - Request method: DELETE
+2024-12-16 20:22:28 - Error: Invalid request method
+2024-12-16 20:22:28 - Request method: GET
+2024-12-16 20:22:28 - Fetched playlists: 7
+2024-12-16 20:22:31 - Request method: DELETE
+2024-12-16 20:22:31 - Error: Invalid request method
+2024-12-16 20:22:31 - Request method: GET
+2024-12-16 20:22:31 - Fetched playlists: 7
+2024-12-16 20:22:36 - Request method: GET
+2024-12-16 20:22:36 - Fetched playlists: 7
+2024-12-16 20:22:38 - Request method: GET
+2024-12-16 20:22:38 - Fetched playlists: 7
+2024-12-16 20:22:41 - Request method: POST
+2024-12-16 20:22:41 - Received POST data: {"name":"undefined","description":"ss"}
+2024-12-16 20:22:41 - Created new playlist with ID: 36
+2024-12-16 20:22:41 - Request method: GET
+2024-12-16 20:22:41 - Fetched playlists: 8
+2024-12-16 20:22:47 - Request method: GET
+2024-12-16 20:22:47 - Fetched playlists: 8
+2024-12-16 20:22:54 - Request method: POST
+2024-12-16 20:22:54 - Received POST data: {"name":"hoppppaaa","description":""}
+2024-12-16 20:22:54 - Created new playlist with ID: 37
+2024-12-16 20:22:54 - Request method: GET
+2024-12-16 20:22:54 - Fetched playlists: 9
+2024-12-16 20:22:59 - Request method: DELETE
+2024-12-16 20:22:59 - Error: Invalid request method
+2024-12-16 20:22:59 - Request method: GET
+2024-12-16 20:22:59 - Fetched playlists: 9
+2024-12-16 20:23:47 - Request method: DELETE
+2024-12-16 20:23:47 - Error: Invalid request method
+2024-12-16 20:23:47 - Request method: GET
+2024-12-16 20:23:47 - Fetched playlists: 9
